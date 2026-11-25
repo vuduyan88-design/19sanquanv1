@@ -1814,7 +1814,8 @@
               <select id="tf-resStatus" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
                 <option value="Chưa khai báo" ${(!t || t.residenceStatus === 'Chưa khai báo') ? 'selected' : ''}>Chưa khai báo</option>
                 <option value="Đang xử lý" ${t?.residenceStatus === 'Đang xử lý' ? 'selected' : ''}>Đang xử lý</option>
-                <option value="Đã đăng ký" ${t?.residenceStatus === 'Đã đăng ký' ? 'selected' : ''}>Đã đăng ký</option>
+                <option value="Còn hiệu lực" ${(t?.residenceStatus === 'Còn hiệu lực' || t?.residenceStatus === 'Đã đăng ký') ? 'selected' : ''}>Còn hiệu lực</option>
+                <option value="Đã hết hạn" ${(t?.residenceStatus === 'Đã hết hạn' || t?.residenceStatus === 'Hết hiệu lực') ? 'selected' : ''}>Đã hết hạn</option>
               </select>
             </div>
             <div>
@@ -1834,6 +1835,7 @@
     async function saveTenantForm(existingId) {
       const fullName = (document.getElementById('tf-name').value || '').trim();
       if (!fullName) { showToast('Vui lòng nhập Họ và tên khách thuê.', 'warning'); return; }
+      const existingTenant = existingId ? appState.tenants.find(x => String(x.id) === String(existingId)) : null;
       const obj = {
         id: existingId || ('T_' + Date.now()),
         fullName,
@@ -1847,6 +1849,7 @@
         roleInRoom: document.getElementById('tf-role').value,
         address: (document.getElementById('tf-address').value || '').trim(),
         job: (document.getElementById('tf-job').value || '').trim(),
+        contractStatus: existingTenant?.contractStatus || 'Còn hiệu lực',
         residenceStatus: document.getElementById('tf-resStatus').value,
         residenceExpiry: document.getElementById('tf-resExp').value,
         cccdFront: session.tempCccd.front || '',
