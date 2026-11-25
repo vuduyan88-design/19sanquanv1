@@ -214,9 +214,8 @@
     // 1. CẤU HÌNH HỆ THỐNG, LƯU TRỮ AN TOÀN & BẢO MẬT V3
     // =========================================================================
 
-    // Để trống nếu chạy trực tiếp trong Google Apps Script (index.html).
-    // Nếu host riêng trên Netlify/GitHub, dán URL /exec vào đây.
-    const DEFAULT_SHEET_API_URL = "";
+    // Gắn sẵn URL Web App Google Apps Script để tự động đồng bộ trên mọi thiết bị
+    const DEFAULT_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwbazSbXMFFPOYNKgYCUDF6zIfQqZH-Unx9wovFBb91t7zPp6exE9bJjCdTJcRXYaqp/exec";
 
     // Mã băm SHA-256 có muối của mật khẩu Chủ nhà (không lưu mật khẩu gốc trong mã nguồn)
     const AUTH_SALT = "SQ19_HANOI_2026_";
@@ -635,9 +634,27 @@
             if (res.rooms[id]) appState.rooms[id] = Object.assign(appState.rooms[id], res.rooms[id]);
           });
         }
+        const activeTenants = [];
+        const extraExpired = [];
         if (Array.isArray(res.tenants)) {
-          appState.tenants = res.tenants;
-          appState.tenants.forEach(t => {
+          res.tenants.forEach(t => {
+            if (isExpiredContractText(t.contractStatus)) {
+              extraExpired.push({
+                id: 'CLIENT_EXP_' + (t.id || Date.now()),
+                source: 'sheet',
+                roomId: t.room || '',
+                tenantNames: t.fullName || '(Chưa rõ tên)',
+                cccds: t.cccd || '',
+                phones: t.phone || '',
+                startDate: t.sheetStartDate || '',
+                endDate: t.sheetEndDate || '',
+                moveOutDate: t.sheetEndDate || '',
+                depositStatus: 'Hết hiệu lực (Cột N)',
+                notes: 'Phân loại từ Cột N trên Google Sheet'
+              });
+              return;
+            }
+            activeTenants.push(t);
             if (t.room && appState.rooms[t.room]) {
               const r = appState.rooms[t.room];
               r.active = true;
@@ -648,7 +665,13 @@
             }
           });
         }
-        if (Array.isArray(res.expiredContracts)) appState.expiredContracts = res.expiredContracts;
+        appState.tenants = activeTenants;
+
+        // Gộp danh sách HĐ hết hiệu lực từ Sheet & bản ghi thanh lý, chống trùng lặp
+        const serverExpired = Array.isArray(res.expiredContracts) ? res.expiredContracts : [];
+        const seenExp = new Set(serverExpired.map(x => String(x.id)));
+        appState.expiredContracts = serverExpired.concat(extraExpired.filter(x => !seenExp.has(String(x.id))));
+
         if (Array.isArray(res.guestStays)) appState.guestStays = res.guestStays;
         mergeOfflineGuestQueueIntoAppState();
         session.lastSyncAt = new Date().toLocaleTimeString('vi-VN');
@@ -736,12 +759,20 @@
       return ALL_ROOM_IDS.filter(id => appState.rooms[id] && appState.rooms[id].active);
     }
 
+    function isExpiredContractText(val) {
+      const s = String(val || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .toLowerCase().trim();
+      return s.includes('het hieu luc');
+    }
+
     function getRoomTenants(roomId) {
       const order = { 'Đại diện': 0, 'Ở cùng': 1, 'Bảo trợ': 2 };
       return (appState.tenants || [])
         .filter(t => {
-          const cs = String(t.contractStatus || '').toLowerCase();
-          if (cs.includes('hết hiệu lực') || cs.includes('het hieu luc')) return false;
+          if (isExpiredContractText(t.contractStatus)) return false;
           return String(t.room) === String(roomId);
         })
         .sort((a, b) => (order[a.roleInRoom] ?? 9) - (order[b.roleInRoom] ?? 9));
@@ -1173,7 +1204,7 @@
         { id: 'crm', label: 'Khách', icon: 'users' },
         { id: 'residence', label: 'Tạm trú', icon: 'file-badge' },
         { id: 'contract', label: 'Hợp đồng', icon: 'file-text' },
-        { id: 'expired', label: 'Hết hạn', icon: 'archive' },
+        { id: 'expired', label: 'HĐ Hết hiệu lực', shortLabel: 'Hết hiệu lực', icon: 'archive' },
         { id: 'otp', label: 'OTP', icon: 'key' }
       ];
 
@@ -1240,7 +1271,7 @@
             ${tabs.map(t => `
               <button onclick="switchLandlordTab('${t.id}')" class="flex flex-col items-center justify-center py-2 rounded-2xl transition ${session.landlordTab === t.id ? 'neu-nav-active' : 'text-[#6B8299]'}">
                 <i data-lucide="${t.icon}" class="w-4 h-4"></i>
-                <span class="text-[10px] font-semibold mt-1 truncate max-w-full px-0.5">${t.label}</span>
+                <span class="text-[10px] font-semibold mt-1 truncate max-w-full px-0.5">${t.shortLabel || t.label}</span>
               </button>
             `).join('')}
           </nav>
@@ -1598,6 +1629,7 @@
     function renderCrmTab() {
       const q = (session.crmSearch || '').toLowerCase().trim();
       const filtered = (appState.tenants || []).filter(t => {
+        if (isExpiredContractText(t.contractStatus)) return false;
         if (session.crmRoomFilter !== 'ALL') {
           if (session.crmRoomFilter === 'UNASSIGNED' && t.room) return false;
           if (session.crmRoomFilter !== 'UNASSIGNED' && String(t.room) !== session.crmRoomFilter) return false;
@@ -1929,27 +1961,30 @@
 
     // --- TAB 3: TẠM TRÚ – TẠM VẮNG & MẪU CT01 ---
     function renderResidenceTab() {
-      const assigned = (appState.tenants || []).filter(t => t.room);
+      const assigned = (appState.tenants || []).filter(t => t.room && !isExpiredContractText(t.contractStatus));
       return `
         <div class="space-y-4">
-          <div class="neu-card p-5 space-y-3">
-            <h1 class="text-xl font-bold text-[#243B53]">Tạm trú & Mẫu CT01</h1>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
-              <div class="p-3 rounded-2xl neu-inset">
-                <div class="font-bold text-[#6E59F0]">05 ngày làm việc</div>
-                <div class="text-[#6B8299] mt-0.5">Khai báo sau khi vào ở</div>
+          <div class="neu-card p-5 space-y-4">
+            <div>
+              <h1 class="text-xl font-bold text-[#243B53]">Tạm trú – Tạm vắng & Mẫu CT01</h1>
+              <p class="text-xs text-[#6B8299] mt-0.5">Theo Luật Cư trú 2020, Thông tư 53/2025/TT-BCA (Mẫu CT01 mới) và Điều 6 Hợp đồng 19 Sân Quần.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div class="neu-inset p-3.5 rounded-2xl">
+                <div class="font-bold text-emerald-700">Mốc 05 ngày làm việc</div>
+                <div class="text-[#5A7087] mt-1">Cam kết khai báo cư trú theo Điều 6 HĐ kể từ ngày vào ở.</div>
               </div>
-              <div class="p-3 rounded-2xl neu-inset">
-                <div class="font-bold text-[#3B82F6]">Mốc 30 ngày</div>
-                <div class="text-[#6B8299] mt-0.5">Bắt buộc đăng ký tạm trú</div>
+              <div class="neu-inset p-3.5 rounded-2xl">
+                <div class="font-bold text-sky-700">Đăng ký Tạm trú (30 ngày)</div>
+                <div class="text-[#5A7087] mt-1">Bắt buộc đăng ký nếu ở từ 30 ngày trở lên (tối đa 02 năm/lần).</div>
               </div>
-              <div class="p-3 rounded-2xl neu-inset">
-                <div class="font-bold text-amber-600">Trước 15 ngày</div>
-                <div class="text-[#6B8299] mt-0.5">Gia hạn trước khi hết hạn</div>
+              <div class="neu-inset p-3.5 rounded-2xl">
+                <div class="font-bold text-amber-700">Gia hạn trước 15 ngày</div>
+                <div class="text-[#5A7087] mt-1">Làm thủ tục gia hạn tạm trú trong vòng 15 ngày trước khi hết hạn.</div>
               </div>
-              <div class="p-3 rounded-2xl neu-inset">
-                <div class="font-bold text-rose-500">23h00 / 08h00</div>
-                <div class="text-[#6B8299] mt-0.5">Báo khách ngủ qua đêm</div>
+              <div class="neu-inset p-3.5 rounded-2xl">
+                <div class="font-bold text-violet-700">Lưu trú qua đêm (23h / 08h)</div>
+                <div class="text-[#5A7087] mt-1">Đến trước 23h báo trước 23h cùng ngày; sau 23h báo trước 08h sáng hôm sau.</div>
               </div>
             </div>
           </div>
@@ -1958,20 +1993,24 @@
             ${assigned.length ? assigned.map(t => {
               const b = getResidenceBadge(t);
               return `
-                <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center text-xs font-extrabold text-[#6E59F0] shrink-0">${escapeHtml(t.room)}</div>
+                <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div class="flex items-start gap-3 min-w-0">
+                    <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-[#6E59F0] shrink-0">
+                      ${escapeHtml(t.room)}
+                    </div>
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm font-bold text-[#243B53]">${escapeHtml(t.fullName)}</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${b.cls}">${b.label}</span>
                       </div>
-                      <div class="text-xs text-[#6B8299] mt-0.5">Hạn tạm trú: <strong>${formatDateVN(t.residenceExpiry)}</strong></div>
+                      <div class="text-[#6B8299] mt-0.5">
+                        CCCD: <span class="font-mono">${escapeHtml(t.cccd || '—')}</span> · Hạn tạm trú: <strong class="text-[#243B53]">${formatDateVN(t.residenceExpiry)}</strong>
+                      </div>
                     </div>
                   </div>
                   <div class="flex items-center justify-end gap-2 shrink-0">
-                    <button onclick="openTenantFormModal('${escapeHtml(t.id)}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#243B53] text-xs font-bold">Cập nhật</button>
-                    <button onclick="session.selectedContractRoom='${escapeHtml(t.room)}'; session.contractOpts={pl1:false,pl2:false,pl3:false,ct01:true}; switchLandlordTab('contract');" class="px-3.5 py-2 rounded-xl neu-btn-primary text-xs font-bold">Xuất CT01</button>
+                    <button onclick="openTenantFormModal('${escapeHtml(t.id)}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#243B53] font-bold">Cập nhật</button>
+                    <button onclick="session.selectedContractRoom='${escapeHtml(t.room)}'; session.contractOpts={pl1:false,pl2:false,pl3:false,ct01:true}; switchLandlordTab('contract');" class="px-3.5 py-2 rounded-xl neu-btn-primary font-bold">Xuất CT01</button>
                   </div>
                 </div>
               `;
@@ -2301,43 +2340,91 @@
       setTimeout(() => { win.focus(); win.print(); }, 300);
     }
 
-    // --- TAB 5: HỢP ĐỒNG HẾT HIỆU LỰC ---
+    // --- TAB 5: HỢP ĐỒNG HẾT HIỆU LỰC (NHÓM HIỂN THỊ THEO TỪNG PHÒNG) ---
     function renderExpiredTab() {
       const list = appState.expiredContracts || [];
+
+      // Gom nhóm toàn bộ khách hết hiệu lực theo Mã phòng
+      const grouped = {};
+      list.forEach(item => {
+        const rawRoom = String(item.roomId || '').trim();
+        const key = (rawRoom && rawRoom !== '—') ? rawRoom : 'UNASSIGNED';
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(item);
+      });
+
+      const roomKeys = Object.keys(grouped).sort((a, b) => {
+        if (a === 'UNASSIGNED') return 1;
+        if (b === 'UNASSIGNED') return -1;
+        return a.localeCompare(b, 'vi', { numeric: true });
+      });
+
       return `
         <div class="space-y-4">
-          <div class="neu-card p-5">
-            <h1 class="text-xl font-bold text-[#243B53]">Hợp đồng Hết hiệu lực (${list.length})</h1>
-            <p class="text-xs text-[#6B8299] mt-0.5">Tự động gom các dòng có Cột N = "Hết hiệu lực" trên Google Sheet và các phòng đã thanh lý (không tính vào hợp đồng đang thuê).</p>
+          <div class="neu-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h1 class="text-xl font-bold text-[#243B53]">HĐ Hết hiệu lực (${list.length} hồ sơ · ${roomKeys.length} phòng)</h1>
+              <p class="text-xs text-[#6B8299] mt-0.5">Phân loại tự động từ Cột N ("Hết hiệu lực") trên Google Sheet và lịch sử thanh lý, hiển thị gom nhóm theo từng phòng.</p>
+            </div>
           </div>
 
-          <div class="space-y-3">
-            ${list.length ? list.map(e => `
-              <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div class="flex items-start gap-3">
-                  <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-[#6B8299] shrink-0">${escapeHtml(e.roomId || '—')}</div>
-                  <div>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="text-sm font-bold text-[#243B53]">${escapeHtml(e.tenantNames)}</span>
-                      ${e.source === 'sheet' ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Cột N · Hết hiệu lực</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">Đã thanh lý</span>`}
+          ${roomKeys.length ? `
+            <div class="space-y-4">
+              ${roomKeys.map(roomKey => {
+                const items = grouped[roomKey];
+                const isUnassigned = roomKey === 'UNASSIGNED';
+                return `
+                  <div class="neu-card p-4 sm:p-5 space-y-3">
+                    <!-- Tiêu đề nhóm Phòng -->
+                    <div class="flex items-center justify-between gap-2 pb-2 border-b border-white/70">
+                      <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-sm ${isUnassigned ? 'text-[#7D93AA]' : 'text-rose-600'} shrink-0">
+                          ${isUnassigned ? '—' : escapeHtml(roomKey)}
+                        </div>
+                        <div>
+                          <div class="text-base font-bold text-[#243B53]">${isUnassigned ? 'Chưa gán mã phòng' : 'Phòng ' + escapeHtml(roomKey)}</div>
+                          <div class="text-[11px] text-[#6B8299]">${items.length} khách đã hết hiệu lực hợp đồng</div>
+                        </div>
+                      </div>
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 shrink-0">Hết hiệu lực</span>
                     </div>
-                    <div class="text-[#6B8299] mt-0.5">
-                      ${e.phones ? 'SĐT: ' + escapeHtml(e.phones) + ' · ' : ''}${e.cccds ? 'CCCD: ' + escapeHtml(e.cccds) : ''}
+
+                    <!-- Danh sách người hết hiệu lực trong phòng này -->
+                    <div class="space-y-2.5">
+                      ${items.map(e => `
+                        <div class="neu-inset p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                          <div class="space-y-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                              <span class="text-sm font-bold text-[#243B53]">${escapeHtml(e.tenantNames)}</span>
+                              ${e.source === 'sheet'
+                                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Cột N · Sheet</span>`
+                                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">Đã thanh lý</span>`
+                              }
+                            </div>
+                            <div class="text-[#6B8299]">
+                              ${e.phones ? 'SĐT: <strong class="text-[#243B53]">' + escapeHtml(e.phones) + '</strong>' : 'Chưa có SĐT'}
+                              ${e.cccds ? ' · CCCD: <span class="font-mono">' + escapeHtml(e.cccds) + '</span>' : ''}
+                            </div>
+                            <div class="text-[#6B8299]">
+                              ${e.startDate ? 'Bắt đầu: ' + formatDateVN(e.startDate) + ' · ' : ''}
+                              ${e.moveOutDate ? 'Kết thúc / Rời đi: <strong class="text-rose-500">' + formatDateVN(e.moveOutDate) + '</strong>' : 'Chưa ghi ngày kết thúc'}
+                            </div>
+                            ${(e.depositStatus || e.notes) ? `
+                              <div class="text-[11px] text-[#5A7087]">${escapeHtml(e.depositStatus || '')}${e.notes ? ' · ' + escapeHtml(e.notes) : ''}</div>
+                            ` : ''}
+                          </div>
+                          ${e.source === 'sheet'
+                            ? `<span class="self-end sm:self-center text-[10px] font-semibold text-[#7D93AA] shrink-0">Đồng bộ Cột N</span>`
+                            : `<button onclick="deleteExpiredRecord('${escapeHtml(e.id)}')" class="self-end sm:self-center px-3.5 py-2 rounded-xl neu-btn text-rose-500 font-bold shrink-0">Xóa</button>`
+                          }
+                        </div>
+                      `).join('')}
                     </div>
-                    <div class="text-[#6B8299] mt-0.5">
-                      ${e.moveOutDate ? `Kết thúc / Rời đi: <strong class="text-rose-500">${formatDateVN(e.moveOutDate)}</strong>` : 'Chưa ghi ngày kết thúc'}
-                      ${e.startDate ? ` · Bắt đầu: ${formatDateVN(e.startDate)}` : ''}
-                    </div>
-                    <div class="text-[#243B53] font-semibold mt-1">${escapeHtml(e.depositStatus || '')}${e.notes ? ' · ' + escapeHtml(e.notes) : ''}</div>
                   </div>
-                </div>
-                ${e.source === 'sheet'
-                  ? `<span class="self-end sm:self-center text-[11px] font-semibold text-[#7D93AA] shrink-0">Đồng bộ từ Sheet</span>`
-                  : `<button onclick="deleteExpiredRecord('${escapeHtml(e.id)}')" class="self-end sm:self-center px-3.5 py-2 rounded-xl neu-btn text-rose-500 font-bold shrink-0">Xóa</button>`
-                }
-              </div>
-            `).join('') : `<div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">Chưa có hợp đồng hết hiệu lực nào.</div>`}
-          </div>
+                `;
+              }).join('')}
+            </div>
+          ` : `<div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">Chưa có hợp đồng hết hiệu lực nào.</div>`}
         </div>
       `;
     }
