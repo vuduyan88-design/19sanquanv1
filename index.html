@@ -655,9 +655,10 @@
         await saveEncryptedVault();
         if (!silent) {
           const count = appState.tenants.length;
+          const expCount = (appState.expiredContracts || []).length;
           const sheetInfo = res.meta && res.meta.sheetName ? ` từ sheet "${res.meta.sheetName}"` : '';
-          if (count > 0) {
-            showToast(`Đã đồng bộ thành công ${count} hồ sơ khách thuê${sheetInfo}!`, 'success');
+          if (count > 0 || expCount > 0) {
+            showToast(`Đã đồng bộ ${count} khách đang thuê và ${expCount} HĐ hết hiệu lực${sheetInfo}!`, 'success');
           } else {
             showToast(`Kết nối thành công${sheetInfo} nhưng chưa thấy hồ sơ nào.`, 'warning');
           }
@@ -738,7 +739,11 @@
     function getRoomTenants(roomId) {
       const order = { 'Đại diện': 0, 'Ở cùng': 1, 'Bảo trợ': 2 };
       return (appState.tenants || [])
-        .filter(t => String(t.room) === String(roomId))
+        .filter(t => {
+          const cs = String(t.contractStatus || '').toLowerCase();
+          if (cs.includes('hết hiệu lực') || cs.includes('het hieu luc')) return false;
+          return String(t.room) === String(roomId);
+        })
         .sort((a, b) => (order[a.roleInRoom] ?? 9) - (order[b.roleInRoom] ?? 9));
     }
 
@@ -867,14 +872,18 @@
     }
 
     function getResidenceBadge(tenant) {
-      const st = tenant?.residenceStatus || 'Chưa khai báo';
+      const st = String(tenant?.residenceStatus || 'Chưa khai báo').trim();
+      const norm = st.toLowerCase();
       const d = daysUntil(tenant?.residenceExpiry);
-      if (st === 'Đã đăng ký') {
+      if (norm.includes('hết hạn') || norm.includes('hết hiệu lực') || norm.includes('het han') || norm.includes('het hieu luc')) {
+        return { label: 'Hết hiệu lực', cls: 'bg-rose-100 text-rose-700', valid: false };
+      }
+      if (norm.includes('còn hiệu lực') || norm.includes('đã đăng ký') || norm.includes('con hieu luc') || norm.includes('da dang ky')) {
         if (d !== null && d < 0) return { label: 'Hết hiệu lực', cls: 'bg-rose-100 text-rose-700', valid: false };
         if (d !== null && d <= 15) return { label: `Sắp hết hạn (${d} ngày)`, cls: 'bg-amber-100 text-amber-800', valid: true };
         return { label: 'Còn hiệu lực', cls: 'bg-emerald-100 text-emerald-700', valid: true };
       }
-      if (st === 'Đang xử lý') return { label: 'Đang xử lý', cls: 'bg-sky-100 text-sky-700', valid: false };
+      if (norm.includes('đang xử lý') || norm.includes('dang xu ly')) return { label: 'Đang xử lý', cls: 'bg-sky-100 text-sky-700', valid: false };
       return { label: 'Chưa khai báo', cls: 'bg-rose-100 text-rose-700', valid: false };
     }
 
@@ -2299,21 +2308,33 @@
         <div class="space-y-4">
           <div class="neu-card p-5">
             <h1 class="text-xl font-bold text-[#243B53]">Hợp đồng Hết hiệu lực (${list.length})</h1>
-            <p class="text-xs text-[#6B8299] mt-0.5">Lưu trữ khách đã rời đi và tình trạng hoàn tiền cọc.</p>
+            <p class="text-xs text-[#6B8299] mt-0.5">Tự động gom các dòng có Cột N = "Hết hiệu lực" trên Google Sheet và các phòng đã thanh lý (không tính vào hợp đồng đang thuê).</p>
           </div>
 
           <div class="space-y-3">
             ${list.length ? list.map(e => `
               <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div class="flex items-start gap-3">
-                  <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-[#6B8299] shrink-0">${escapeHtml(e.roomId)}</div>
+                  <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-[#6B8299] shrink-0">${escapeHtml(e.roomId || '—')}</div>
                   <div>
-                    <div class="text-sm font-bold text-[#243B53]">${escapeHtml(e.tenantNames)}</div>
-                    <div class="text-[#6B8299] mt-0.5">Rời đi: <strong class="text-rose-500">${formatDateVN(e.moveOutDate)}</strong> · HĐ: ${formatDateVN(e.startDate)} → ${formatDateVN(e.endDate)}</div>
-                    <div class="text-[#243B53] font-semibold mt-1">${escapeHtml(e.depositStatus)} ${e.notes ? '· ' + escapeHtml(e.notes) : ''}</div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="text-sm font-bold text-[#243B53]">${escapeHtml(e.tenantNames)}</span>
+                      ${e.source === 'sheet' ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Cột N · Hết hiệu lực</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">Đã thanh lý</span>`}
+                    </div>
+                    <div class="text-[#6B8299] mt-0.5">
+                      ${e.phones ? 'SĐT: ' + escapeHtml(e.phones) + ' · ' : ''}${e.cccds ? 'CCCD: ' + escapeHtml(e.cccds) : ''}
+                    </div>
+                    <div class="text-[#6B8299] mt-0.5">
+                      ${e.moveOutDate ? `Kết thúc / Rời đi: <strong class="text-rose-500">${formatDateVN(e.moveOutDate)}</strong>` : 'Chưa ghi ngày kết thúc'}
+                      ${e.startDate ? ` · Bắt đầu: ${formatDateVN(e.startDate)}` : ''}
+                    </div>
+                    <div class="text-[#243B53] font-semibold mt-1">${escapeHtml(e.depositStatus || '')}${e.notes ? ' · ' + escapeHtml(e.notes) : ''}</div>
                   </div>
                 </div>
-                <button onclick="deleteExpiredRecord('${escapeHtml(e.id)}')" class="self-end sm:self-center px-3.5 py-2 rounded-xl neu-btn text-rose-500 font-bold">Xóa</button>
+                ${e.source === 'sheet'
+                  ? `<span class="self-end sm:self-center text-[11px] font-semibold text-[#7D93AA] shrink-0">Đồng bộ từ Sheet</span>`
+                  : `<button onclick="deleteExpiredRecord('${escapeHtml(e.id)}')" class="self-end sm:self-center px-3.5 py-2 rounded-xl neu-btn text-rose-500 font-bold shrink-0">Xóa</button>`
+                }
               </div>
             `).join('') : `<div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">Chưa có hợp đồng hết hiệu lực nào.</div>`}
           </div>
