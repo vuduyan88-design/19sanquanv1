@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hệ thống Quản lý Lưu trú & Hợp đồng</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            iceBg: '#EAF2FA',
+            iceSurface: '#EEF5FC',
+            inkMain: '#243B53',
+            inkSub: '#6B8299',
+            accentPurple: '#7C62F6',
+            accentBlue: '#4DA3FF'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #EAF2FA;
+      color: #243B53;
+      margin: 0;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Hệ thống Soft UI / Neumorphism tối giản theo mẫu */
+    .neu-card {
+      background: #EDF4FB;
+      border-radius: 26px;
+      box-shadow:
+        -8px -8px 18px rgba(255, 255, 255, 0.92),
+        8px 8px 20px rgba(163, 189, 217, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+    }
+
+    .neu-card-sm {
+      background: #EDF4FB;
+      border-radius: 20px;
+      box-shadow:
+        -5px -5px 12px rgba(255, 255, 255, 0.9),
+        5px 5px 14px rgba(163, 189, 217, 0.38);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    .neu-inset {
+      background: #E6EFF8;
+      box-shadow:
+        inset 4px 4px 9px rgba(163, 189, 217, 0.48),
+        inset -4px -4px 9px rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+    }
+
+    .neu-btn {
+      background: #EDF4FB;
+      box-shadow:
+        -4px -4px 10px rgba(255, 255, 255, 0.92),
+        4px 4px 10px rgba(163, 189, 217, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      transition: all 0.18s ease;
+    }
+    .neu-btn:active {
+      box-shadow:
+        inset 3px 3px 7px rgba(163, 189, 217, 0.5),
+        inset -3px -3px 7px rgba(255, 255, 255, 0.9);
+      transform: scale(0.98);
+    }
+
+    .neu-btn-primary {
+      background: linear-gradient(135deg, #6E7BF2 0%, #8C5CF2 100%);
+      color: #ffffff;
+      box-shadow:
+        -4px -4px 12px rgba(255, 255, 255, 0.8),
+        6px 8px 18px rgba(110, 123, 242, 0.35);
+      transition: all 0.18s ease;
+    }
+    .neu-btn-primary:hover { filter: brightness(1.04); }
+    .neu-btn-primary:active { transform: scale(0.98); }
+
+    .neu-input {
+      background: #E6EFF8;
+      color: #1F354D;
+      box-shadow:
+        inset 4px 4px 8px rgba(163, 189, 217, 0.48),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      transition: box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .neu-input::placeholder {
+      color: #7D93AA;
+      letter-spacing: normal !important;
+      font-weight: 500;
+    }
+    .neu-input:focus {
+      outline: none;
+      border-color: rgba(124, 98, 246, 0.45);
+      box-shadow:
+        inset 4px 4px 8px rgba(163, 189, 217, 0.55),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.98),
+        0 0 0 3px rgba(124, 98, 246, 0.12);
+    }
+
+    .neu-nav-active {
+      background: #E6EFF8;
+      color: #6E59F0;
+      box-shadow:
+        inset 3px 3px 7px rgba(163, 189, 217, 0.5),
+        inset -3px -3px 7px rgba(255, 255, 255, 0.95);
+    }
+
+    /* Khung hiển thị thẻ CCCD / Căn cước chuẩn ISO/IEC 7810 ID-1 (85.6mm x 53.98mm) */
+    .cccd-card-slot {
+      aspect-ratio: 85.6 / 53.98;
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cccd-guide-corners::before,
+    .cccd-guide-corners::after {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border: 2px dashed rgba(255, 255, 255, 0.85);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    /* Giao diện hợp đồng chuẩn A4 */
+    .contract-paper {
+      font-family: 'Times New Roman', Times, serif;
+      color: #111827;
+      line-height: 1.55;
+      font-size: 14px;
+      background: #ffffff;
+    }
+    .contract-paper:focus {
+      outline: 2px solid #7C62F6;
+      outline-offset: 2px;
+    }
+    .contract-paper table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px 0;
+    }
+    .contract-paper th,
+    .contract-paper td {
+      border: 1px solid #374151;
+      padding: 5px 8px;
+      vertical-align: top;
+    }
+    .contract-paper .no-border-table td {
+      border: none !important;
+      padding: 4px 8px;
+    }
+    .contract-paper h1, .contract-paper h2, .contract-paper h3 {
+      margin: 10px 0 6px 0;
+    }
+    .contract-paper p {
+      margin: 4px 0;
+      text-align: justify;
+    }
+    .contract-paper ul {
+      margin: 4px 0 8px 20px;
+      padding: 0;
+    }
+    .contract-paper li {
+      margin: 2px 0;
+      text-align: justify;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(125, 147, 170, 0.35); border-radius: 999px; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#EAF2FA] text-[#243B53]">
+
+  <!-- Vùng hiển thị chính -->
+  <div id="app" class="flex-1 flex flex-col min-h-screen"></div>
+
+  <!-- Khung Modal dùng chung -->
+  <div id="modal-root" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-5 bg-[#243B53]/35 backdrop-blur-xs no-print">
+    <div id="modal-card" class="w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-[#EDF4FB] rounded-[28px] shadow-2xl border border-white/80"></div>
+  </div>
+
+  <!-- Toast thông báo (thay thế hoàn toàn alert) -->
+  <div id="toast-root" class="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] pointer-events-none no-print"></div>
+
+  <script>
+    // =========================================================================
+    // 1. CẤU HÌNH HỆ THỐNG, LƯU TRỮ AN TOÀN & BẢO MẬT V3
+    // =========================================================================
+
+    // Để trống nếu chạy trực tiếp trong Google Apps Script (index.html).
+    // Nếu host riêng trên Netlify/GitHub, dán URL /exec vào đây.
+    const DEFAULT_SHEET_API_URL = "";
+
+    // Mã băm SHA-256 có muối của mật khẩu Chủ nhà (không lưu mật khẩu gốc trong mã nguồn)
+    const AUTH_SALT = "SQ19_HANOI_2026_";
+    const LANDLORD_HASH = "9da3084e7440bc94a58dc4f188ae59ba3b9ebefefefefd2cab43bdfac04b39e3";
+
+    const VAULT_STORAGE_KEY = "sq19_encrypted_vault_v3";
+    const TENANT_VAULT_PREFIX = "sq19_room_vault_v3_";
+    const SHEET_URL_STORAGE_KEY = "sq19_sheet_api_url_v3";
+    const RATE_LIMIT_PREFIX = "sq19_rl_v3_";
+    const GUEST_QUEUE_KEY = "sq19_guest_stay_queue_v3";
+
+    // Bọc localStorage an toàn (chống lỗi SecurityError trong iframe trên Safari/iPhone)
+    const memoryStorageFallback = {};
+    function safeStorageGet(key) {
+      try { return window.localStorage.getItem(key); } catch (_) { return memoryStorageFallback[key] ?? null; }
+    }
+    function safeStorageSet(key, val) {
+      try { window.localStorage.setItem(key, val); } catch (_) { memoryStorageFallback[key] = String(val); }
+    }
+    function safeStorageRemove(key) {
+      try { window.localStorage.removeItem(key); } catch (_) { delete memoryStorageFallback[key]; }
+    }
+
+    const ALL_ROOM_IDS = [
+      '201','202','203',
+      '301','302','303',
+      '401','402','403',
+      '501','502','503',
+      '601','602','603',
+      '701','702','703'
+    ];
+    const DEFAULT_ACTIVE_ROOMS = [
+      '201','202','203',
+      '301','302','303',
+      '401','402','403',
+      '501','502','503',
+      '601','602','603'
+    ];
+
+    const session = {
+      role: null,
+      authStep: 'landing',
+      landlordTab: 'rooms',
+      tenantRoomId: null,
+      tenantOtp: null,
+      tenantRoomData: null,
+      tenantList: [],
+      tenantGuestStays: [],
+      showOtpPlain: false,
+      showPwPlain: false,
+      adminSecret: null,
+      adminApiProof: null,
+      syncing: false,
+      lastSyncAt: null,
+      crmSearch: '',
+      crmRoomFilter: 'ALL',
+      crmResFilter: 'ALL',
+      selectedContractRoom: '201',
+      contractOpts: { pl1: true, pl2: true, pl3: true, ct01: false },
+      tempCccd: { front: '', back: '' },
+      guestCccd: { front: '', back: '' },
+      cameraStream: null,
+      cameraFacing: 'environment',
+      cameraTarget: null
+    };
+
+    let appState = createEmptyState();
+    let pendingConfirmCallback = null;
+
+    function createEmptyState() {
+      const rooms = {};
+      ALL_ROOM_IDS.forEach(id => {
+        rooms[id] = {
+          id,
+          floor: Number(id.charAt(0)),
+          active: DEFAULT_ACTIVE_ROOMS.includes(id),
+          status: 'vacant',
+          startDate: '',
+          termMonths: 12,
+          endDate: '',
+          rent: 5500000,
+          deposit: 5500000,
+          depositMonths: 1,
+          paymentDay: 5,
+          vehicles: 1,
+          otp: '',
+          otpLocked: false,
+          notes: ''
+        };
+      });
+      return {
+        rooms,
+        tenants: [],
+        expiredContracts: [],
+        guestStays: [],
+        contractDrafts: {}
+      };
+    }
+
+    (function purgeLegacyPlaintextStorage() {
+      ['sq19_app_state_v1', 'sq19_app_state_v2', 'sq19_state'].forEach(k => {
+        if (safeStorageGet(k)) safeStorageRemove(k);
+      });
+    })();
+
+    // =========================================================================
+    // 2. BĂM SHA-256 THUẦN JS & MÃ HÓA AES-256-GCM + PBKDF2
+    // =========================================================================
+    function sha256(ascii) {
+      function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+      }
+      const mathPow = Math.pow;
+      const maxWord = mathPow(2, 32);
+      const lengthProperty = 'length';
+      let i, j;
+      let result = '';
+      const words = [];
+      const utf8 = unescape(encodeURIComponent(ascii));
+      const asciiBitLength = utf8[lengthProperty] * 8;
+      let hash = sha256.h = sha256.h || [];
+      const k = sha256.k = sha256.k || [];
+      let primeCounter = k[lengthProperty];
+      const isComposite = {};
+      for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+          hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+          k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+      }
+      const padded = utf8 + '\x80';
+      let paddedFull = padded;
+      while ((paddedFull[lengthProperty] % 64) - 56) paddedFull += '\x00';
+      for (i = 0; i < paddedFull[lengthProperty]; i++) {
+        j = paddedFull.charCodeAt(i);
+        words[i >> 2] |= j << ((3 - i) % 4) * 8;
+      }
+      words[words[lengthProperty]] = ((asciiBitLength / maxWord) | 0);
+      words[words[lengthProperty]] = (asciiBitLength);
+
+      const h = hash.slice(0, 8);
+      for (j = 0; j < words[lengthProperty];) {
+        const w = words.slice(j, j += 16);
+        const oldHash = h.slice(0);
+        for (i = 0; i < 64; i++) {
+          const w15 = w[i - 15], w2 = w[i - 2];
+          const a = h[0], e = h[4];
+          const temp1 = h[7]
+            + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+            + ((e & h[5]) ^ ((~e) & h[6]))
+            + k[i]
+            + (w[i] = (i < 16) ? w[i] : (
+              w[i - 16]
+              + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+              + w[i - 7]
+              + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+            ) | 0);
+          const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+            + ((a & h[1]) ^ (a & h[2]) ^ (h[1] & h[2]));
+          h.unshift((temp1 + temp2) | 0);
+          h[4] = (h[4] + temp1) | 0;
+          h.pop();
+        }
+        for (i = 0; i < 8; i++) h[i] = (h[i] + oldHash[i]) | 0;
+      }
+      for (i = 0; i < 8; i++) {
+        for (j = 3; j + 1; j--) {
+          const b = (h[i] >> (j * 8)) & 255;
+          result += ((b < 16) ? 0 : '') + b.toString(16);
+        }
+      }
+      return result;
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+    function base64ToBytes(b64) {
+      const binary = atob(b64);
+      const out = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+      return out;
+    }
+    function hexToBytes(hex) {
+      const out = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+      return out;
+    }
+
+    async function encryptPayload(plainText, secret) {
+      try {
+        if (window.crypto && window.crypto.subtle) {
+          const enc = new TextEncoder();
+          const salt = window.crypto.getRandomValues(new Uint8Array(16));
+          const iv = window.crypto.getRandomValues(new Uint8Array(12));
+          const keyMat = await window.crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey']);
+          const aesKey = await window.crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' },
+            keyMat,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt']
+          );
+          const cipherBuf = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, enc.encode(plainText));
+          return JSON.stringify({
+            v: 'aes-gcm-v3',
+            s: bytesToBase64(salt),
+            i: bytesToBase64(iv),
+            c: bytesToBase64(new Uint8Array(cipherBuf))
+          });
+        }
+      } catch (_) {}
+
+      const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      const dataBytes = new TextEncoder().encode(plainText);
+      const out = new Uint8Array(dataBytes.length);
+      let block = new Uint8Array(0);
+      for (let i = 0; i < dataBytes.length; i++) {
+        if (i % 32 === 0) block = hexToBytes(sha256(secret + ':' + nonce + ':' + (i >> 5)));
+        out[i] = dataBytes[i] ^ block[i % 32];
+      }
+      const mac = sha256(secret + ':MAC:' + nonce + ':' + bytesToBase64(out));
+      return JSON.stringify({ v: 'sha-ctr-v3', n: nonce, c: bytesToBase64(out), m: mac });
+    }
+
+    async function decryptPayload(rawJson, secret) {
+      if (!rawJson) return null;
+      const pkg = JSON.parse(rawJson);
+      if (pkg.v === 'aes-gcm-v3' && window.crypto && window.crypto.subtle) {
+        const enc = new TextEncoder();
+        const salt = base64ToBytes(pkg.s);
+        const iv = base64ToBytes(pkg.i);
+        const cipher = base64ToBytes(pkg.c);
+        const keyMat = await window.crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey']);
+        const aesKey = await window.crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' },
+          keyMat,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+        const plainBuf = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, cipher);
+        return new TextDecoder().decode(plainBuf);
+      }
+      if (pkg.v === 'sha-ctr-v3') {
+        const expectedMac = sha256(secret + ':MAC:' + pkg.n + ':' + pkg.c);
+        if (expectedMac !== pkg.m) throw new Error('Invalid key');
+        const cipher = base64ToBytes(pkg.c);
+        const out = new Uint8Array(cipher.length);
+        let block = new Uint8Array(0);
+        for (let i = 0; i < cipher.length; i++) {
+          if (i % 32 === 0) block = hexToBytes(sha256(secret + ':' + pkg.n + ':' + (i >> 5)));
+          out[i] = cipher[i] ^ block[i % 32];
+        }
+        return new TextDecoder().decode(out);
+      }
+      throw new Error('Unsupported vault format');
+    }
+
+    async function saveEncryptedVault() {
+      if (!session.adminSecret) return;
+      try {
+        const cipher = await encryptPayload(JSON.stringify(appState), session.adminSecret);
+        safeStorageSet(VAULT_STORAGE_KEY, cipher);
+        await syncOfflineTenantVaults();
+      } catch (err) {
+        console.error('Lỗi mã hóa kho dữ liệu:', err);
+      }
+    }
+
+    async function loadEncryptedVault(secret) {
+      const raw = safeStorageGet(VAULT_STORAGE_KEY);
+      if (!raw) {
+        appState = createEmptyState();
+        return;
+      }
+      const plain = await decryptPayload(raw, secret);
+      const parsed = JSON.parse(plain);
+      const base = createEmptyState();
+      if (parsed && parsed.rooms) {
+        ALL_ROOM_IDS.forEach(id => {
+          if (parsed.rooms[id]) base.rooms[id] = Object.assign(base.rooms[id], parsed.rooms[id]);
+        });
+      }
+      base.tenants = Array.isArray(parsed.tenants) ? parsed.tenants : [];
+      base.expiredContracts = Array.isArray(parsed.expiredContracts) ? parsed.expiredContracts : [];
+      base.guestStays = Array.isArray(parsed.guestStays) ? parsed.guestStays : [];
+      base.contractDrafts = parsed.contractDrafts || {};
+      appState = base;
+      mergeOfflineGuestQueueIntoAppState();
+    }
+
+    function mergeOfflineGuestQueueIntoAppState() {
+      try {
+        const raw = safeStorageGet(GUEST_QUEUE_KEY);
+        if (!raw) return;
+        const queued = JSON.parse(raw);
+        if (!Array.isArray(queued) || !queued.length) return;
+        const existingIds = new Set((appState.guestStays || []).map(x => x.id));
+        let added = 0;
+        queued.forEach(item => {
+          if (item && item.id && !existingIds.has(item.id)) {
+            appState.guestStays.unshift(item);
+            added++;
+          }
+        });
+        if (added > 0) saveEncryptedVault();
+      } catch (_) {}
+    }
+
+    async function syncOfflineTenantVaults() {
+      try {
+        for (const id of ALL_ROOM_IDS) {
+          const room = appState.rooms[id];
+          const key = TENANT_VAULT_PREFIX + id;
+          if (!room || !room.active || !room.otp || room.otpLocked) {
+            safeStorageRemove(key);
+            continue;
+          }
+          const safeRoom = Object.assign({}, room, { otp: '' });
+          const tenants = getRoomTenants(id);
+          const otpHash = sha256('SQ19_OTP_V3_' + id + '_' + room.otp);
+          const payload = await encryptPayload(JSON.stringify({ room: safeRoom, tenants }), 'OTP_' + id + '_' + room.otp);
+          safeStorageSet(key, JSON.stringify({ h: otpHash, p: payload }));
+        }
+      } catch (_) {}
+    }
+
+    function checkRateLimit(bucket) {
+      try {
+        const raw = safeStorageGet(RATE_LIMIT_PREFIX + bucket);
+        if (!raw) return { blocked: false, waitSec: 0 };
+        const obj = JSON.parse(raw);
+        if (obj.until && Date.now() < obj.until) {
+          return { blocked: true, waitSec: Math.ceil((obj.until - Date.now()) / 1000) };
+        }
+      } catch (_) {}
+      return { blocked: false, waitSec: 0 };
+    }
+    function recordFailedAttempt(bucket) {
+      try {
+        const raw = safeStorageGet(RATE_LIMIT_PREFIX + bucket);
+        const obj = raw ? JSON.parse(raw) : { count: 0, until: 0 };
+        if (obj.until && Date.now() >= obj.until) obj.count = 0;
+        obj.count += 1;
+        if (obj.count >= 5) {
+          obj.until = Date.now() + 60000;
+          obj.count = 0;
+        }
+        safeStorageSet(RATE_LIMIT_PREFIX + bucket, JSON.stringify(obj));
+        return obj.until > Date.now() ? 60 : 0;
+      } catch (_) { return 0; }
+    }
+    function clearRateLimit(bucket) {
+      safeStorageRemove(RATE_LIMIT_PREFIX + bucket);
+    }
+
+    // =========================================================================
+    // 3. KẾT NỐI GOOGLE SHEET API (HỖ TRỢ CHẠY TRỰC TIẾP TRONG APPS SCRIPT)
+    // =========================================================================
+    function isRunningInAppsScript() {
+      return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+    function getSheetApiUrl() {
+      const saved = (safeStorageGet(SHEET_URL_STORAGE_KEY) || '').trim();
+      return saved || DEFAULT_SHEET_API_URL.trim();
+    }
+    function isSheetConnected() {
+      return isRunningInAppsScript() || Boolean(getSheetApiUrl());
+    }
+
+    async function callSheetApi(payload) {
+      if (isRunningInAppsScript()) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler((resStr) => {
+              try {
+                const data = typeof resStr === 'string' ? JSON.parse(resStr) : resStr;
+                if (!data || !data.ok) reject(new Error((data && data.error) || 'Lỗi từ Google Apps Script'));
+                else resolve(data);
+              } catch (_) {
+                reject(new Error('Phản hồi từ Google Apps Script không hợp lệ.'));
+              }
+            })
+            .withFailureHandler((err) => reject(new Error((err && err.message) || String(err))))
+            .apiDispatch(JSON.stringify(payload));
+        });
+      }
+      const url = getSheetApiUrl();
+      if (!url) throw new Error('Chưa cấu hình URL Google Sheet Web App.');
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (_) {
+        throw new Error('Phản hồi từ Google Apps Script không hợp lệ. Kiểm tra lại quyền "Bất kỳ ai".');
+      }
+      if (!data.ok) throw new Error(data.error || 'Lỗi từ Google Apps Script');
+      return data;
+    }
+
+    async function syncFromSheet(silent = false) {
+      if (!isSheetConnected() || !session.adminApiProof) return false;
+      session.syncing = true;
+      render();
+      try {
+        const res = await callSheetApi({ action: 'getData', proof: session.adminApiProof });
+        if (res.rooms) {
+          ALL_ROOM_IDS.forEach(id => {
+            if (res.rooms[id]) appState.rooms[id] = Object.assign(appState.rooms[id], res.rooms[id]);
+          });
+        }
+        if (Array.isArray(res.tenants)) {
+          appState.tenants = res.tenants;
+          appState.tenants.forEach(t => {
+            if (t.room && appState.rooms[t.room]) {
+              const r = appState.rooms[t.room];
+              r.active = true;
+              if (r.status === 'vacant') r.status = 'active';
+              if (!r.otp && t.sheetOtp) { r.otp = t.sheetOtp; r.otpLocked = false; }
+              if (!r.startDate && t.sheetStartDate) r.startDate = t.sheetStartDate;
+              if (!r.endDate && t.sheetEndDate) r.endDate = t.sheetEndDate;
+            }
+          });
+        }
+        if (Array.isArray(res.expiredContracts)) appState.expiredContracts = res.expiredContracts;
+        if (Array.isArray(res.guestStays)) appState.guestStays = res.guestStays;
+        mergeOfflineGuestQueueIntoAppState();
+        session.lastSyncAt = new Date().toLocaleTimeString('vi-VN');
+        await saveEncryptedVault();
+        if (!silent) {
+          const count = appState.tenants.length;
+          const sheetInfo = res.meta && res.meta.sheetName ? ` từ sheet "${res.meta.sheetName}"` : '';
+          if (count > 0) {
+            showToast(`Đã đồng bộ thành công ${count} hồ sơ khách thuê${sheetInfo}!`, 'success');
+          } else {
+            showToast(`Kết nối thành công${sheetInfo} nhưng chưa thấy hồ sơ nào.`, 'warning');
+          }
+        }
+        return true;
+      } catch (err) {
+        if (!silent) showToast('Không thể đồng bộ Google Sheet: ' + err.message, 'error');
+        return false;
+      } finally {
+        session.syncing = false;
+        render();
+      }
+    }
+
+    async function pushActionToSheet(action, extra = {}) {
+      if (!isSheetConnected() || !session.adminApiProof) return;
+      try {
+        await callSheetApi(Object.assign({ action, proof: session.adminApiProof }, extra));
+        session.lastSyncAt = new Date().toLocaleTimeString('vi-VN');
+      } catch (err) {
+        showToast('Lưu cục bộ thành công, nhưng lỗi đẩy lên Sheet: ' + err.message, 'warning');
+      }
+    }
+
+    // =========================================================================
+    // 4. NHÓM HÀM TIỆN ÍCH, ĐỊNH DẠNG NGÀY/TIỀN, TRẠNG THÁI PHÒNG & MODAL
+    // =========================================================================
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(msg, type = 'info') {
+      const root = document.getElementById('toast-root');
+      if (!root) return;
+      const styles = {
+        success: 'bg-emerald-600 text-white border-emerald-500',
+        error: 'bg-rose-600 text-white border-rose-500',
+        warning: 'bg-amber-500 text-white border-amber-400',
+        info: 'bg-slate-800 text-white border-slate-700'
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-lg border text-xs sm:text-sm font-semibold transition-all duration-300 ${styles[type] || styles.info}`;
+      el.textContent = msg;
+      root.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-6px)';
+        setTimeout(() => el.remove(), 300);
+      }, 3600);
+    }
+
+    function copyTextSafe(text, successMsg = 'Đã sao chép!') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast(successMsg, 'success');
+      } catch (_) {
+        showToast('Không thể tự động sao chép, vui lòng bôi đen copy thủ công.', 'warning');
+      }
+    }
+
+    function getActiveRoomIds() {
+      return ALL_ROOM_IDS.filter(id => appState.rooms[id] && appState.rooms[id].active);
+    }
+
+    function getRoomTenants(roomId) {
+      const order = { 'Đại diện': 0, 'Ở cùng': 1, 'Bảo trợ': 2 };
+      return (appState.tenants || [])
+        .filter(t => String(t.room) === String(roomId))
+        .sort((a, b) => (order[a.roleInRoom] ?? 9) - (order[b.roleInRoom] ?? 9));
+    }
+
+    function formatDateVN(isoDate) {
+      if (!isoDate) return '—';
+      const s = String(isoDate).trim();
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+      return s;
+    }
+
+    function addMonthsToDate(isoDate, months) {
+      if (!isoDate) return '';
+      const d = new Date(isoDate + 'T00:00:00');
+      if (isNaN(d.getTime())) return '';
+      d.setMonth(d.getMonth() + Number(months || 0));
+      return d.toISOString().slice(0, 10);
+    }
+
+    function daysUntil(isoDate) {
+      if (!isoDate) return null;
+      const target = new Date(String(isoDate).slice(0, 10) + 'T00:00:00');
+      if (isNaN(target.getTime())) return null;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return Math.round((target.getTime() - today.getTime()) / 86400000);
+    }
+
+    function formatVND(amount) {
+      const n = Number(amount || 0);
+      return n ? n.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
+    }
+
+    function numberToVietnameseWords(num) {
+      const n = Math.round(Number(num) || 0);
+      if (n <= 0) return 'Không đồng';
+      const units = ['', 'nghìn', 'triệu', 'tỷ'];
+      const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+      const readTriple = (val, full) => {
+        const h = Math.floor(val / 100);
+        const t = Math.floor((val % 100) / 10);
+        const u = val % 10;
+        let out = '';
+        if (h > 0 || full) out += digits[h] + ' trăm ';
+        if (t > 1) {
+          out += digits[t] + ' mươi ';
+          if (u === 1) out += 'mốt ';
+          else if (u === 5) out += 'lăm ';
+          else if (u > 0) out += digits[u] + ' ';
+        } else if (t === 1) {
+          out += 'mười ';
+          if (u === 5) out += 'lăm ';
+          else if (u > 0) out += digits[u] + ' ';
+        } else if (u > 0) {
+          if (h > 0 || full) out += 'linh ';
+          out += digits[u] + ' ';
+        }
+        return out.trim();
+      };
+      const parts = [];
+      let rem = n;
+      let idx = 0;
+      while (rem > 0 && idx < units.length) {
+        const grp = rem % 1000;
+        if (grp > 0) {
+          const full = rem >= 1000;
+          parts.unshift((readTriple(grp, full) + (units[idx] ? ' ' + units[idx] : '')).trim());
+        }
+        rem = Math.floor(rem / 1000);
+        idx++;
+      }
+      const res = parts.join(' ').trim() + ' đồng chẵn';
+      return res.charAt(0).toUpperCase() + res.slice(1);
+    }
+
+    function getRoomStatusInfo(room) {
+      if (!room || room.status === 'vacant') {
+        return {
+          key: 'vacant',
+          label: 'Phòng trống',
+          bg: 'bg-slate-50/90',
+          border: 'border-slate-200/80',
+          badge: 'bg-slate-200/80 text-slate-700',
+          dot: 'bg-slate-400'
+        };
+      }
+      const d = daysUntil(room.endDate);
+      if (room.status === 'expired' || (d !== null && d < 0)) {
+        return {
+          key: 'expired',
+          label: d !== null && d < 0 ? `Hết hạn (${Math.abs(d)} ngày)` : 'Hết hạn HĐ',
+          bg: 'bg-rose-50/80',
+          border: 'border-rose-200',
+          badge: 'bg-rose-100 text-rose-700',
+          dot: 'bg-rose-500'
+        };
+      }
+      if (d !== null && d <= 30) {
+        return {
+          key: 'expiring',
+          label: `Sắp hết hạn (${d} ngày)`,
+          bg: 'bg-amber-50/80',
+          border: 'border-amber-200',
+          badge: 'bg-amber-100 text-amber-800',
+          dot: 'bg-amber-500'
+        };
+      }
+      if (room.status === 'extended') {
+        return {
+          key: 'extended',
+          label: 'Gia hạn thêm',
+          bg: 'bg-violet-50/75',
+          border: 'border-violet-200',
+          badge: 'bg-violet-100 text-violet-700',
+          dot: 'bg-violet-500'
+        };
+      }
+      return {
+        key: 'active',
+        label: d !== null ? `Còn hạn (${d} ngày)` : 'Đang thuê',
+        bg: 'bg-emerald-50/70',
+        border: 'border-emerald-200',
+        badge: 'bg-emerald-100 text-emerald-700',
+        dot: 'bg-emerald-500'
+      };
+    }
+
+    function getResidenceBadge(tenant) {
+      const st = tenant?.residenceStatus || 'Chưa khai báo';
+      const d = daysUntil(tenant?.residenceExpiry);
+      if (st === 'Đã đăng ký') {
+        if (d !== null && d < 0) return { label: 'Hết hiệu lực', cls: 'bg-rose-100 text-rose-700', valid: false };
+        if (d !== null && d <= 15) return { label: `Sắp hết hạn (${d} ngày)`, cls: 'bg-amber-100 text-amber-800', valid: true };
+        return { label: 'Còn hiệu lực', cls: 'bg-emerald-100 text-emerald-700', valid: true };
+      }
+      if (st === 'Đang xử lý') return { label: 'Đang xử lý', cls: 'bg-sky-100 text-sky-700', valid: false };
+      return { label: 'Chưa khai báo', cls: 'bg-rose-100 text-rose-700', valid: false };
+    }
+
+    function openModal(html, maxWidthClass = 'max-w-2xl') {
+      const root = document.getElementById('modal-root');
+      const card = document.getElementById('modal-card');
+      card.className = `w-full ${maxWidthClass} max-h-[92vh] overflow-y-auto bg-[#EDF4FB] rounded-[28px] shadow-2xl border border-white/80`;
+      card.innerHTML = html;
+      root.classList.remove('hidden');
+      root.classList.add('flex');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeModal() {
+      const root = document.getElementById('modal-root');
+      root.classList.add('hidden');
+      root.classList.remove('flex');
+      document.getElementById('modal-card').innerHTML = '';
+    }
+
+    function showConfirmModal(title, message, onConfirm, confirmLabel = 'Xác nhận', danger = false) {
+      pendingConfirmCallback = onConfirm;
+      openModal(`
+        <div class="p-6 sm:p-7">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="text-lg font-extrabold text-slate-900">${escapeHtml(title)}</h3>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <p class="mt-3 text-sm text-slate-600 leading-relaxed">${escapeHtml(message)}</p>
+          <div class="mt-6 flex items-center justify-end gap-2.5">
+            <button onclick="closeModal()" class="px-4 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold">Hủy bỏ</button>
+            <button onclick="executeConfirmCallback()" class="px-5 py-2.5 rounded-full ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#156B68] hover:bg-[#0F5350]'} text-white text-sm font-bold">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      `, 'max-w-md');
+    }
+
+    function executeConfirmCallback() {
+      const cb = pendingConfirmCallback;
+      pendingConfirmCallback = null;
+      closeModal();
+      if (typeof cb === 'function') cb();
+    }
+
+    // =========================================================================
+    // 5. MÀN HÌNH ĐĂNG NHẬP TỐI GIẢN SOFT UI (MOBILE-FIRST, KHÔNG WIDGET)
+    // =========================================================================
+    function setAuthStep(step) {
+      session.authStep = step;
+      session.showOtpPlain = false;
+      session.showPwPlain = false;
+      render();
+    }
+
+    function togglePwVisibility() {
+      session.showPwPlain = !session.showPwPlain;
+      const inp = document.getElementById('landlord-pw-input');
+      if (inp) inp.type = session.showPwPlain ? 'text' : 'password';
+      const icon = document.getElementById('pw-eye-icon');
+      if (icon) icon.setAttribute('data-lucide', session.showPwPlain ? 'eye-off' : 'eye');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleOtpVisibility() {
+      session.showOtpPlain = !session.showOtpPlain;
+      const inp = document.getElementById('tenant-otp-input');
+      if (inp) inp.type = session.showOtpPlain ? 'text' : 'password';
+      const icon = document.getElementById('otp-eye-icon');
+      if (icon) icon.setAttribute('data-lucide', session.showOtpPlain ? 'eye-off' : 'eye');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderAuth() {
+      const step = session.authStep;
+      return `
+        <div class="min-h-screen w-full bg-[#EAF2FA] flex flex-col items-center justify-center px-4 py-8">
+          <div class="w-full max-w-[400px] neu-card p-6 sm:p-7 space-y-7">
+            <!-- Thanh đầu ứng dụng phong cách tối giản -->
+            <div class="flex items-center justify-between">
+              ${step === 'landing' ? `
+                <div class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-[#5A7087]">
+                  <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                </div>
+              ` : `
+                <button onclick="setAuthStep('landing')" aria-label="Quay lại" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-[#243B53]">
+                  <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </button>
+              `}
+              <span class="text-xs font-semibold tracking-[0.28em] text-[#334E68] uppercase">19 SÂN QUẦN</span>
+              <div class="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#7C62F6]">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+              </div>
+            </div>
+
+            ${step === 'landing' ? `
+              <div class="space-y-4 pt-2">
+                <button onclick="setAuthStep('landlord-login')" class="w-full neu-card-sm p-5 flex items-center justify-between gap-4 text-left active:scale-[0.99] transition">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl neu-inset flex items-center justify-center text-[#7C62F6] shrink-0">
+                      <i data-lucide="key-round" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-[#7C62F6]">Quản trị viên</div>
+                      <div class="text-lg font-bold text-[#243B53] mt-0.5">Tôi là Chủ nhà</div>
+                    </div>
+                  </div>
+                  <div class="w-9 h-9 rounded-xl neu-btn flex items-center justify-center text-[#5A7087] shrink-0">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                  </div>
+                </button>
+
+                <button onclick="setAuthStep('tenant-login')" class="w-full neu-card-sm p-5 flex items-center justify-between gap-4 text-left active:scale-[0.99] transition">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl neu-inset flex items-center justify-center text-[#3B82F6] shrink-0">
+                      <i data-lucide="user-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <div class="text-[10px] font-bold tracking-[0.16em] uppercase text-[#3B82F6]">Cư dân tòa nhà</div>
+                      <div class="text-lg font-bold text-[#243B53] mt-0.5">Tôi là Khách thuê</div>
+                    </div>
+                  </div>
+                  <div class="w-9 h-9 rounded-xl neu-btn flex items-center justify-center text-[#5A7087] shrink-0">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                  </div>
+                </button>
+              </div>
+            ` : step === 'landlord-login' ? `
+              <div class="space-y-5">
+                <div>
+                  <h2 class="text-2xl font-bold text-[#243B53]">Đăng nhập Chủ nhà</h2>
+                </div>
+                <form onsubmit="handleLandlordLogin(event)" class="space-y-4">
+                  <div class="relative">
+                    <input id="landlord-pw-input" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu quản trị"
+                      class="neu-input w-full pl-4 pr-12 py-3.5 rounded-2xl text-sm font-semibold" />
+                    <button type="button" onclick="togglePwVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#6B8299] hover:text-[#243B53]">
+                      <i id="pw-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                  <button type="submit" class="neu-btn-primary w-full py-3.5 rounded-2xl font-bold text-sm">
+                    Mở bảng điều khiển
+                  </button>
+                </form>
+              </div>
+            ` : `
+              <div class="space-y-5">
+                <div>
+                  <h2 class="text-2xl font-bold text-[#243B53]">Cổng Khách thuê</h2>
+                </div>
+                <form onsubmit="handleTenantLogin(event)" class="space-y-4">
+                  <div class="relative">
+                    <input id="tenant-otp-input" type="password" inputmode="numeric" maxlength="10" required placeholder="Nhập mã OTP phòng"
+                      class="neu-input w-full pl-4 pr-12 py-3.5 rounded-2xl text-base font-bold tracking-[0.12em] text-left" />
+                    <button type="button" onclick="toggleOtpVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#6B8299] hover:text-[#243B53]">
+                      <i id="otp-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                  <button type="submit" id="tenant-login-btn" class="neu-btn-primary w-full py-3.5 rounded-2xl font-bold text-sm">
+                    Truy cập thông tin phòng
+                  </button>
+                </form>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    async function handleLandlordLogin(e) {
+      e.preventDefault();
+      const rl = checkRateLimit('landlord');
+      if (rl.blocked) {
+        showToast(`Bạn đã nhập sai quá 5 lần. Vui lòng thử lại sau ${rl.waitSec} giây.`, 'error');
+        return;
+      }
+      const pw = (document.getElementById('landlord-pw-input')?.value || '').trim();
+      const hashed = sha256(AUTH_SALT + pw);
+      if (hashed !== LANDLORD_HASH) {
+        const locked = recordFailedAttempt('landlord');
+        showToast(locked ? 'Nhập sai quá 5 lần! Tạm khóa đăng nhập 60 giây.' : 'Mật khẩu Chủ nhà không chính xác.', 'error');
+        return;
+      }
+      clearRateLimit('landlord');
+      session.role = 'landlord';
+      session.adminSecret = pw;
+      session.adminApiProof = sha256('SQ19_API_PROOF_V3_' + pw);
+      try {
+        await loadEncryptedVault(pw);
+      } catch (_) {
+        appState = createEmptyState();
+      }
+      render();
+      showToast('Đăng nhập Chủ nhà thành công!', 'success');
+      if (isSheetConnected()) {
+        syncFromSheet(false);
+      }
+    }
+
+    async function handleTenantLogin(e) {
+      e.preventDefault();
+      const rl = checkRateLimit('tenant');
+      if (rl.blocked) {
+        showToast(`Nhập sai OTP quá 5 lần. Vui lòng chờ ${rl.waitSec} giây.`, 'error');
+        return;
+      }
+      const otp = (document.getElementById('tenant-otp-input')?.value || '').trim();
+      if (!otp) return;
+
+      const btn = document.getElementById('tenant-login-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang xác thực OTP...'; }
+
+      try {
+        if (isSheetConnected()) {
+          const res = await callSheetApi({ action: 'verifyOtp', otp });
+          clearRateLimit('tenant');
+          session.role = 'tenant';
+          session.tenantOtp = otp;
+          session.tenantRoomId = res.room.id;
+          session.tenantRoomData = res.room;
+          session.tenantList = Array.isArray(res.tenants) ? res.tenants : [];
+          session.tenantGuestStays = Array.isArray(res.guestStays) ? res.guestStays : [];
+          render();
+          showToast(`Chào mừng cư dân Phòng ${res.room.id}!`, 'success');
+          return;
+        }
+
+        for (const id of ALL_ROOM_IDS) {
+          const raw = safeStorageGet(TENANT_VAULT_PREFIX + id);
+          if (!raw) continue;
+          const pkg = JSON.parse(raw);
+          const expectedHash = sha256('SQ19_OTP_V3_' + id + '_' + otp);
+          if (pkg.h === expectedHash) {
+            const plain = await decryptPayload(pkg.p, 'OTP_' + id + '_' + otp);
+            const data = JSON.parse(plain);
+            clearRateLimit('tenant');
+            session.role = 'tenant';
+            session.tenantOtp = otp;
+            session.tenantRoomId = id;
+            session.tenantRoomData = data.room;
+            session.tenantList = Array.isArray(data.tenants) ? data.tenants : [];
+            const queued = JSON.parse(safeStorageGet(GUEST_QUEUE_KEY) || '[]');
+            session.tenantGuestStays = queued.filter(g => String(g.roomId) === String(id));
+            render();
+            showToast(`Chào mừng cư dân Phòng ${id}!`, 'success');
+            return;
+          }
+        }
+        throw new Error('Mã OTP không đúng hoặc phòng đang bị khóa.');
+      } catch (err) {
+        const locked = recordFailedAttempt('tenant');
+        showToast(locked ? 'Nhập sai quá 5 lần! Tạm khóa 60 giây.' : (err.message || 'Mã OTP không chính xác.'), 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Truy cập thông tin phòng'; }
+      }
+    }
+
+    function logout() {
+      stopCameraStream();
+      session.role = null;
+      session.authStep = 'landing';
+      session.adminSecret = null;
+      session.adminApiProof = null;
+      session.tenantRoomId = null;
+      session.tenantOtp = null;
+      session.tenantRoomData = null;
+      session.tenantList = [];
+      session.tenantGuestStays = [];
+      appState = createEmptyState();
+      closeModal();
+      render();
+      showToast('Đã đăng xuất và xóa sạch phiên làm việc.', 'info');
+    }
+
+    // =========================================================================
+    // 6. PHÂN HỆ CHỦ NHÀ (SOFT UI TỐI GIẢN · MOBILE-FIRST)
+    // =========================================================================
+    function switchLandlordTab(tab) {
+      session.landlordTab = tab;
+      render();
+    }
+
+    function renderLandlord() {
+      const pendingGuests = (appState.guestStays || []).filter(g => g.status === 'Mới gửi').length;
+      const connected = isSheetConnected();
+      const tabs = [
+        { id: 'rooms', label: 'Phòng', icon: 'layout-grid' },
+        { id: 'crm', label: 'Khách', icon: 'users' },
+        { id: 'residence', label: 'Tạm trú', icon: 'file-badge' },
+        { id: 'contract', label: 'Hợp đồng', icon: 'file-text' },
+        { id: 'expired', label: 'Hết hạn', icon: 'archive' },
+        { id: 'otp', label: 'OTP', icon: 'key' }
+      ];
+
+      let bodyHtml = '';
+      if (session.landlordTab === 'rooms') bodyHtml = renderRoomsTab();
+      else if (session.landlordTab === 'crm') bodyHtml = renderCrmTab();
+      else if (session.landlordTab === 'residence') bodyHtml = renderResidenceTab();
+      else if (session.landlordTab === 'contract') bodyHtml = renderContractTab();
+      else if (session.landlordTab === 'expired') bodyHtml = renderExpiredTab();
+      else if (session.landlordTab === 'otp') bodyHtml = renderOtpTab();
+
+      return `
+        <div class="min-h-screen flex flex-col bg-[#EAF2FA] pb-24 lg:pb-10">
+          <!-- Thanh đầu tối giản chuẩn mobile -->
+          <header class="sticky top-0 z-30 bg-[#EAF2FA]/92 backdrop-blur-md no-print">
+            <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <button onclick="openSheetModal()" title="Kết nối Google Sheet" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center shrink-0 ${connected ? 'text-[#7C62F6]' : 'text-[#6B8299]'}">
+                  <i data-lucide="sheet" class="w-4 h-4"></i>
+                </button>
+                <div class="min-w-0">
+                  <div class="text-xs font-bold tracking-[0.22em] uppercase text-[#243B53] truncate">19 SÂN QUẦN</div>
+                  <div class="flex items-center gap-1.5 text-[10px] font-semibold text-[#6B8299]">
+                    <span class="w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                    <span class="truncate">${connected ? (session.lastSyncAt ? 'Đã đồng bộ ' + session.lastSyncAt : 'Kết nối Sheet') : 'Offline'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Menu Desktop -->
+              <nav class="hidden lg:flex items-center gap-1.5 p-1.5 rounded-2xl neu-inset">
+                ${tabs.map(t => `
+                  <button onclick="switchLandlordTab('${t.id}')" class="px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${session.landlordTab === t.id ? 'neu-btn text-[#6E59F0] font-bold' : 'text-[#6B8299] hover:text-[#243B53]'}">
+                    <i data-lucide="${t.icon}" class="w-3.5 h-3.5"></i>
+                    <span>${t.label}</span>
+                  </button>
+                `).join('')}
+              </nav>
+
+              <!-- Nút thao tác nhanh -->
+              <div class="flex items-center gap-2 shrink-0">
+                <button onclick="openGuestNotificationsModal()" title="Thông báo lưu trú" class="relative w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-[#243B53]">
+                  <i data-lucide="bell" class="w-4 h-4"></i>
+                  ${pendingGuests > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F857A6] text-white text-[10px] font-bold flex items-center justify-center shadow-sm">${pendingGuests}</span>` : ''}
+                </button>
+                ${connected ? `
+                  <button onclick="syncFromSheet(false)" title="Đồng bộ ngay" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-[#243B53] ${session.syncing ? 'animate-spin' : ''}">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                ` : ''}
+                <button onclick="logout()" title="Đăng xuất" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-rose-500">
+                  <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main class="flex-1 max-w-5xl w-full mx-auto px-4 pt-2 pb-4">
+            ${bodyHtml}
+          </main>
+
+          <!-- Thanh điều hướng dưới cùng tối giản cho Mobile (tham khảo ảnh mẫu) -->
+          <nav class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-[#EAF2FA]/95 backdrop-blur-md border-t border-white/70 px-2 py-2.5 grid grid-cols-6 gap-1.5 no-print">
+            ${tabs.map(t => `
+              <button onclick="switchLandlordTab('${t.id}')" class="flex flex-col items-center justify-center py-2 rounded-2xl transition ${session.landlordTab === t.id ? 'neu-nav-active' : 'text-[#6B8299]'}">
+                <i data-lucide="${t.icon}" class="w-4 h-4"></i>
+                <span class="text-[10px] font-semibold mt-1 truncate max-w-full px-0.5">${t.label}</span>
+              </button>
+            `).join('')}
+          </nav>
+        </div>
+      `;
+    }
+
+    // --- TAB 1: SƠ ĐỒ PHÒNG (VÒNG TRÒN TỶ LỆ & CỘT CHỈ SỐ SOFT UI) ---
+    function renderRoomsTab() {
+      const activeIds = getActiveRoomIds();
+      const total = activeIds.length || 1;
+      let cActive = 0, cExpiring = 0, cExpired = 0, cVacant = 0;
+      activeIds.forEach(id => {
+        const st = getRoomStatusInfo(appState.rooms[id]).key;
+        if (st === 'vacant') cVacant++;
+        else if (st === 'expired') cExpired++;
+        else if (st === 'expiring') cExpiring++;
+        else cActive++;
+      });
+      const occupiedPct = Math.round(((total - cVacant) / total) * 100);
+      const ringCirc = 2 * Math.PI * 42;
+      const ringOffset = ringCirc * (1 - occupiedPct / 100);
+
+      const bars = [
+        { label: 'Đang thuê', count: cActive, pct: Math.round((cActive / total) * 100), grad: 'from-[#56CCF2] to-[#3B82F6]' },
+        { label: 'Sắp hết', count: cExpiring, pct: Math.round((cExpiring / total) * 100), grad: 'from-[#F6C26B] to-[#F2994A]' },
+        { label: 'Quá hạn', count: cExpired, pct: Math.round((cExpired / total) * 100), grad: 'from-[#FF7EB3] to-[#F857A6]' },
+        { label: 'Trống', count: cVacant, pct: Math.round((cVacant / total) * 100), grad: 'from-[#A5B4FC] to-[#7C62F6]' }
+      ];
+
+      return `
+        <div class="space-y-5">
+          <!-- Thẻ thống kê tối giản lấy cảm hứng trực tiếp từ ảnh mẫu -->
+          <div class="neu-card p-5 sm:p-6 space-y-5">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h1 class="text-xl font-bold text-[#243B53]">Tổng quan ${activeIds.length} phòng</h1>
+                <p class="text-xs text-[#6B8299] mt-0.5">Chạm vào từng phòng để chỉnh hạn HĐ hoặc thanh lý</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openRoomConfigModal()" title="Cấu hình số phòng" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-[#5A7087]">
+                  <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                </button>
+                <button onclick="openTenantFormModal()" title="Thêm khách thuê" class="px-3.5 h-10 rounded-2xl neu-btn-primary text-xs font-bold flex items-center gap-1.5">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  <span class="hidden sm:inline">Thêm khách</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+              <!-- Vòng tròn tỷ lệ lấp đầy -->
+              <div class="md:col-span-5 flex items-center justify-center">
+                <div class="w-36 h-36 rounded-full neu-card flex items-center justify-center relative">
+                  <svg viewBox="0 0 110 110" class="w-32 h-32 -rotate-90">
+                    <defs>
+                      <linearGradient id="occGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#6E7BF2"/>
+                        <stop offset="100%" stop-color="#9B51E0"/>
+                      </linearGradient>
+                    </defs>
+                    <circle cx="55" cy="55" r="42" fill="none" stroke="#DCE7F3" stroke-width="12" />
+                    <circle cx="55" cy="55" r="42" fill="none" stroke="url(#occGrad)" stroke-width="12" stroke-linecap="round"
+                      stroke-dasharray="${ringCirc.toFixed(1)}" stroke-dashoffset="${ringOffset.toFixed(1)}" />
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-xl font-extrabold text-[#243B53]">${occupiedPct}%</span>
+                    <span class="text-[10px] font-semibold text-[#6B8299]">Lấp đầy</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4 cột chỉ số dạng thanh đứng mềm mại -->
+              <div class="md:col-span-7 grid grid-cols-4 gap-3 text-center">
+                ${bars.map(b => `
+                  <div class="flex flex-col items-center">
+                    <div class="w-7 h-24 rounded-full neu-inset p-1 flex items-end overflow-hidden">
+                      <div class="w-full rounded-full bg-gradient-to-t ${b.grad} transition-all" style="height:${Math.max(b.count ? 18 : 0, b.pct)}%"></div>
+                    </div>
+                    <span class="text-[11px] font-semibold text-[#6B8299] mt-2">${b.label}</span>
+                    <span class="text-xs font-extrabold text-[#243B53]">${b.count}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Lưới phòng tối giản cho Mobile & Desktop -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${activeIds.map(id => {
+              const room = appState.rooms[id];
+              const st = getRoomStatusInfo(room);
+              const tenants = getRoomTenants(id);
+              return `
+                <div onclick="openRoomDetailModal('${id}')" class="cursor-pointer neu-card-sm p-4 sm:p-5 flex flex-col justify-between gap-3 active:scale-[0.99] transition">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                      <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-sm text-[#243B53]">${id}</div>
+                      <div>
+                        <div class="text-sm font-bold text-[#243B53]">Phòng ${id}</div>
+                        <div class="text-[11px] text-[#6B8299]">${tenants.length} người · ${room.vehicles || 0} xe</div>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${st.badge} shrink-0">${st.label}</span>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    ${tenants.length ? tenants.map(t => `
+                      <div class="flex items-center justify-between text-xs neu-inset rounded-xl px-3 py-2">
+                        <span class="font-semibold text-[#243B53] truncate">${escapeHtml(t.fullName)}</span>
+                        <span class="text-[10px] text-[#6B8299] ml-2 shrink-0">${escapeHtml(t.phone || t.roleInRoom)}</span>
+                      </div>
+                    `).join('') : `<div class="text-xs text-[#7D93AA] px-1">Phòng đang trống</div>`}
+                  </div>
+
+                  <div class="flex items-center justify-between text-[11px] text-[#6B8299] pt-1">
+                    <span>${room.startDate ? (formatDateVN(room.startDate) + ' → ' + formatDateVN(room.endDate)) : 'Chưa đặt hạn HĐ'}</span>
+                    <span class="font-bold text-[#6E59F0]">${room.rent ? (room.rent / 1000000).toFixed(1) + 'tr' : '—'}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function openRoomConfigModal() {
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-extrabold text-slate-900">Cấu hình danh sách phòng hoạt động</h3>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <p class="text-xs text-slate-500">Bật/tắt các mã phòng từ tầng 2 đến tầng 7 theo thực tế tòa nhà (15 đến 18 phòng).</p>
+          <div class="grid grid-cols-3 gap-2.5">
+            ${ALL_ROOM_IDS.map(id => {
+              const r = appState.rooms[id];
+              return `
+                <label class="flex items-center gap-2 p-3 rounded-2xl border ${r.active ? 'bg-[#EEF8F6] border-emerald-300' : 'bg-slate-50 border-slate-200'} cursor-pointer">
+                  <input type="checkbox" id="cfg-room-${id}" ${r.active ? 'checked' : ''} class="w-4 h-4 accent-[#156B68]" />
+                  <span class="text-sm font-bold text-slate-800">Phòng ${id}</span>
+                </label>
+              `;
+            }).join('')}
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">Đóng</button>
+            <button onclick="saveRoomConfig()" class="px-5 py-2.5 rounded-full bg-[#156B68] text-white text-xs font-bold">Lưu cấu hình</button>
+          </div>
+        </div>
+      `, 'max-w-lg');
+    }
+
+    async function saveRoomConfig() {
+      for (const id of ALL_ROOM_IDS) {
+        const el = document.getElementById('cfg-room-' + id);
+        if (el) appState.rooms[id].active = el.checked;
+      }
+      await saveEncryptedVault();
+      closeModal();
+      render();
+      showToast('Đã cập nhật cấu hình số phòng.', 'success');
+    }
+
+    function openRoomDetailModal(roomId) {
+      const r = appState.rooms[roomId];
+      const tenants = getRoomTenants(roomId);
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-extrabold text-slate-900">Chi tiết Phòng ${roomId}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">${tenants.length} cư dân đang đăng ký tại phòng này</p>
+            </div>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Trạng thái phòng</label>
+              <select id="rm-status" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="vacant" ${r.status === 'vacant' ? 'selected' : ''}>Phòng trống</option>
+                <option value="active" ${r.status === 'active' ? 'selected' : ''}>Đang thuê (Còn hạn)</option>
+                <option value="extended" ${r.status === 'extended' ? 'selected' : ''}>Gia hạn thêm</option>
+                <option value="expired" ${r.status === 'expired' ? 'selected' : ''}>Hết hạn hợp đồng</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Kỳ hạn hợp đồng</label>
+              <select id="rm-term" onchange="autoCalcRoomEnd()" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="6" ${Number(r.termMonths) === 6 ? 'selected' : ''}>6 tháng</option>
+                <option value="12" ${Number(r.termMonths) === 12 ? 'selected' : ''}>12 tháng</option>
+                <option value="24" ${Number(r.termMonths) === 24 ? 'selected' : ''}>24 tháng</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày vào ở (Bắt đầu HĐ)</label>
+              <input id="rm-start" type="date" value="${escapeHtml(r.startDate)}" onchange="autoCalcRoomEnd()" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày kết thúc HĐ</label>
+              <input id="rm-end" type="date" value="${escapeHtml(r.endDate)}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Giá thuê (VNĐ/tháng)</label>
+              <input id="rm-rent" type="number" value="${r.rent || 0}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Tiền đặt cọc (VNĐ)</label>
+              <input id="rm-deposit" type="number" value="${r.deposit || 0}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Số xe đăng ký</label>
+              <input id="rm-vehicles" type="number" min="0" value="${r.vehicles || 0}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày thanh toán hàng tháng</label>
+              <input id="rm-payday" type="number" min="1" max="31" value="${r.paymentDay || 5}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-violet-50/70 border border-violet-200 flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-bold text-violet-900">Gia hạn nhanh hợp đồng:</span>
+            <div class="flex gap-1.5">
+              <button onclick="quickExtendRoom('${roomId}', 6)" class="px-3 py-1.5 rounded-full bg-white hover:bg-violet-100 border border-violet-200 text-violet-700 text-xs font-bold">+6 tháng</button>
+              <button onclick="quickExtendRoom('${roomId}', 12)" class="px-3 py-1.5 rounded-full bg-white hover:bg-violet-100 border border-violet-200 text-violet-700 text-xs font-bold">+12 tháng</button>
+              <button onclick="quickExtendRoom('${roomId}', 24)" class="px-3 py-1.5 rounded-full bg-white hover:bg-violet-100 border border-violet-200 text-violet-700 text-xs font-bold">+24 tháng</button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div class="flex flex-wrap gap-2">
+              <button onclick="openArchiveContractModal('${roomId}')" class="px-3.5 py-2.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold">Thanh lý / Hết hiệu lực</button>
+              <button onclick="closeModal(); session.selectedContractRoom='${roomId}'; switchLandlordTab('contract');" class="px-3.5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">Xuất Hợp đồng</button>
+            </div>
+            <button onclick="saveRoomDetails('${roomId}')" class="px-5 py-2.5 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white text-xs font-bold">Lưu thông tin phòng</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function autoCalcRoomEnd() {
+      const s = document.getElementById('rm-start')?.value;
+      const t = Number(document.getElementById('rm-term')?.value || 12);
+      const eEl = document.getElementById('rm-end');
+      if (s && eEl) eEl.value = addMonthsToDate(s, t);
+    }
+
+    function quickExtendRoom(roomId, addMonths) {
+      const endEl = document.getElementById('rm-end');
+      const statusEl = document.getElementById('rm-status');
+      const base = (endEl && endEl.value) ? endEl.value : new Date().toISOString().slice(0, 10);
+      if (endEl) endEl.value = addMonthsToDate(base, addMonths);
+      if (statusEl) statusEl.value = 'extended';
+      showToast(`Đã cộng thêm ${addMonths} tháng. Bấm "Lưu thông tin phòng" để xác nhận.`, 'info');
+    }
+
+    async function saveRoomDetails(roomId) {
+      const r = appState.rooms[roomId];
+      r.status = document.getElementById('rm-status').value;
+      r.termMonths = Number(document.getElementById('rm-term').value || 12);
+      r.startDate = document.getElementById('rm-start').value;
+      r.endDate = document.getElementById('rm-end').value;
+      r.rent = Number(document.getElementById('rm-rent').value || 0);
+      r.deposit = Number(document.getElementById('rm-deposit').value || 0);
+      r.vehicles = Number(document.getElementById('rm-vehicles').value || 0);
+      r.paymentDay = Number(document.getElementById('rm-payday').value || 5);
+      await saveEncryptedVault();
+      await pushActionToSheet('updateRoom', { room: r });
+      closeModal();
+      render();
+      showToast(`Đã lưu thông tin Phòng ${roomId}!`, 'success');
+    }
+
+    function openArchiveContractModal(roomId) {
+      const tenants = getRoomTenants(roomId);
+      const today = new Date().toISOString().slice(0, 10);
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-extrabold text-rose-700">Thanh lý & Chuyển HĐ Hết hiệu lực — Phòng ${roomId}</h3>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Hệ thống sẽ lưu toàn bộ thông tin khách đã thuê vào mục <strong>HĐ Hết hiệu lực</strong>, gỡ mã phòng khỏi khách hiện tại, khóa OTP cũ và đưa Phòng ${roomId} về trạng thái <strong>Phòng trống</strong>.
+          </p>
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+            <div class="font-bold text-slate-800">Khách thuê rời đi (${tenants.length} người):</div>
+            <div class="text-slate-600 mt-1">${tenants.length ? tenants.map(t => escapeHtml(t.fullName)).join(', ') : 'Không có khách gán phòng'}</div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày trả phòng thực tế</label>
+              <input id="arc-moveout" type="date" value="${today}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Tình trạng hoàn tiền cọc</label>
+              <select id="arc-deposit" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="Đã hoàn cọc đầy đủ">Đã hoàn cọc đầy đủ</option>
+                <option value="Đã khấu trừ & hoàn phần dư">Đã khấu trừ & hoàn phần dư</option>
+                <option value="Chưa hoàn cọc (chờ chốt điện nước)">Chưa hoàn cọc (chờ chốt điện nước)</option>
+                <option value="Mất cọc do vi phạm / báo muộn">Mất cọc do vi phạm / báo muộn</option>
+              </select>
+            </div>
+          </div>
+          <div class="text-xs">
+            <label class="font-bold text-slate-700 block mb-1">Ghi chú bàn giao / chốt công tơ</label>
+            <textarea id="arc-notes" rows="2" placeholder="Ví dụ: Đã chốt điện nước, bàn giao đủ chìa khóa..." class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200"></textarea>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">Hủy</button>
+            <button onclick="confirmArchiveContract('${roomId}')" class="px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold">Xác nhận thanh lý</button>
+          </div>
+        </div>
+      `, 'max-w-lg');
+    }
+
+    async function confirmArchiveContract(roomId) {
+      const r = appState.rooms[roomId];
+      const tenants = getRoomTenants(roomId);
+      const record = {
+        id: 'EXP_' + Date.now(),
+        roomId,
+        tenantNames: tenants.map(t => t.fullName).join(', ') || 'Không rõ',
+        cccds: tenants.map(t => t.cccd).filter(Boolean).join(', '),
+        phones: tenants.map(t => t.phone).filter(Boolean).join(', '),
+        startDate: r.startDate || '',
+        endDate: r.endDate || '',
+        moveOutDate: document.getElementById('arc-moveout').value || new Date().toISOString().slice(0, 10),
+        depositStatus: document.getElementById('arc-deposit').value,
+        notes: (document.getElementById('arc-notes').value || '').trim()
+      };
+      appState.expiredContracts.unshift(record);
+      appState.tenants.forEach(t => {
+        if (String(t.room) === String(roomId)) {
+          t.room = '';
+          t.tenantStatus = 'Đã rời đi';
+        }
+      });
+      r.status = 'vacant';
+      r.startDate = '';
+      r.endDate = '';
+      r.otp = '';
+      r.otpLocked = true;
+
+      await saveEncryptedVault();
+      await pushActionToSheet('archiveContract', { record, room: r });
+      closeModal();
+      render();
+      showToast(`Đã chuyển Phòng ${roomId} sang HĐ Hết hiệu lực và giải phóng phòng trống.`, 'success');
+    }
+
+    // --- TAB 2: CRM KHÁCH THUÊ (THẺ MOBILE + BẢNG DESKTOP TỐI GIẢN) ---
+    function renderCrmTab() {
+      const q = (session.crmSearch || '').toLowerCase().trim();
+      const filtered = (appState.tenants || []).filter(t => {
+        if (session.crmRoomFilter !== 'ALL') {
+          if (session.crmRoomFilter === 'UNASSIGNED' && t.room) return false;
+          if (session.crmRoomFilter !== 'UNASSIGNED' && String(t.room) !== session.crmRoomFilter) return false;
+        }
+        if (session.crmResFilter !== 'ALL') {
+          const badge = getResidenceBadge(t).label;
+          if (session.crmResFilter === 'VALID' && !badge.includes('Còn hiệu lực')) return false;
+          if (session.crmResFilter === 'INVALID' && badge.includes('Còn hiệu lực')) return false;
+        }
+        if (!q) return true;
+        return [t.fullName, t.cccd, t.phone, t.address, t.room, t.job].join(' ').toLowerCase().includes(q);
+      });
+
+      return `
+        <div class="space-y-4">
+          <div class="neu-card p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h1 class="text-xl font-bold text-[#243B53]">Khách thuê (${appState.tenants.length})</h1>
+                <p class="text-xs text-[#6B8299] mt-0.5">Cùng mã phòng tự động gộp vào Hợp đồng & CT01</p>
+              </div>
+              <button onclick="openTenantFormModal()" class="px-4 py-2.5 rounded-2xl neu-btn-primary text-xs font-bold flex items-center gap-1.5 shrink-0">
+                <i data-lucide="plus" class="w-4 h-4"></i> Thêm
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <input type="text" value="${escapeHtml(session.crmSearch)}" oninput="session.crmSearch=this.value; render();"
+                placeholder="Tìm tên, CCCD, SĐT..." class="neu-input px-4 py-2.5 rounded-2xl text-xs font-medium" />
+              <select onchange="session.crmRoomFilter=this.value; render();" class="neu-input px-4 py-2.5 rounded-2xl text-xs font-semibold">
+                <option value="ALL" ${session.crmRoomFilter === 'ALL' ? 'selected' : ''}>Tất cả các phòng</option>
+                <option value="UNASSIGNED" ${session.crmRoomFilter === 'UNASSIGNED' ? 'selected' : ''}>Chưa gán phòng</option>
+                ${getActiveRoomIds().map(id => `<option value="${id}" ${session.crmRoomFilter === id ? 'selected' : ''}>Phòng ${id}</option>`).join('')}
+              </select>
+              <select onchange="session.crmResFilter=this.value; render();" class="neu-input px-4 py-2.5 rounded-2xl text-xs font-semibold">
+                <option value="ALL" ${session.crmResFilter === 'ALL' ? 'selected' : ''}>Mọi trạng thái tạm trú</option>
+                <option value="VALID" ${session.crmResFilter === 'VALID' ? 'selected' : ''}>Tạm trú còn hiệu lực</option>
+                <option value="INVALID" ${session.crmResFilter === 'INVALID' ? 'selected' : ''}>Chưa khai báo / Hết hạn</option>
+              </select>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <label class="cursor-pointer px-3.5 py-2 rounded-2xl neu-btn text-[#243B53] text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="upload" class="w-3.5 h-3.5 text-[#7C62F6]"></i> Nhập CSV
+                <input type="file" accept=".csv" onchange="importTenantsCsv(event)" class="hidden" />
+              </label>
+              <button onclick="exportTenantsCsv()" class="px-3.5 py-2 rounded-2xl neu-btn text-[#243B53] text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-[#3B82F6]"></i> Xuất CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            ${filtered.length ? filtered.map(t => {
+              const resB = getResidenceBadge(t);
+              const hasImg = Boolean(t.cccdFront || t.cccdBack);
+              return `
+                <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-start gap-3 min-w-0">
+                    <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center text-xs font-extrabold ${t.room ? 'text-[#6E59F0]' : 'text-[#7D93AA]'} shrink-0">
+                      ${t.room ? escapeHtml(t.room) : '—'}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm font-bold text-[#243B53]">${escapeHtml(t.fullName)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${resB.cls}">${resB.label}</span>
+                      </div>
+                      <div class="text-xs text-[#6B8299] mt-0.5">
+                        ${escapeHtml(t.phone || 'Chưa có SĐT')} · CCCD: <span class="font-mono">${escapeHtml(t.cccd || '—')}</span>
+                      </div>
+                      <div class="text-[11px] text-[#7D93AA] mt-0.5 truncate">
+                        ${escapeHtml(t.roleInRoom || 'Đại diện')}${t.job ? ' · ' + escapeHtml(t.job) : ''}${hasImg ? ' · Có ảnh CCCD' : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-end gap-2 shrink-0">
+                    <button onclick="openTenantFormModal('${escapeHtml(t.id)}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#243B53] text-xs font-bold">Sửa</button>
+                    <button onclick="askDeleteTenant('${escapeHtml(t.id)}')" class="px-3.5 py-2 rounded-xl neu-btn text-rose-500 text-xs font-bold">Xóa</button>
+                  </div>
+                </div>
+              `;
+            }).join('') : `
+              <div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">
+                Chưa có dữ liệu khách thuê. Hãy bấm nút <strong>Đồng bộ</strong> góc trên phải hoặc <strong>Nhập CSV / Thêm</strong>.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function openTenantFormModal(tenantId = null) {
+      const t = tenantId ? appState.tenants.find(x => String(x.id) === String(tenantId)) : null;
+      session.tempCccd = { front: t?.cccdFront || '', back: t?.cccdBack || '' };
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-extrabold text-slate-900">${t ? 'Chỉnh sửa hồ sơ khách thuê' : 'Thêm khách thuê mới'}</h3>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-[#EEF8F6]/70 border border-emerald-200/80 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-[#156B68] flex items-center gap-1.5">
+                <i data-lucide="credit-card" class="w-4 h-4"></i> Ảnh CCCD / Căn cước 2 mặt (Chuẩn 85,6 × 53,98 mm)
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ${['front', 'back'].map(side => `
+                <div class="space-y-1.5">
+                  <div class="text-[11px] font-bold text-slate-600">${side === 'front' ? 'Mặt trước CCCD' : 'Mặt sau CCCD'}</div>
+                  <div id="crm-cccd-preview-${side}" class="cccd-card-slot bg-white border-2 border-dashed border-emerald-300 flex items-center justify-center">
+                    ${renderCccdSlotInner(session.tempCccd[side], side)}
+                  </div>
+                  <div class="flex gap-1.5">
+                    <button type="button" onclick="openCameraModal('crm', '${side}')" class="flex-1 py-1.5 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white text-[11px] font-bold flex items-center justify-center gap-1">
+                      <i data-lucide="camera" class="w-3.5 h-3.5"></i> Chụp Camera
+                    </button>
+                    <label class="flex-1 cursor-pointer py-1.5 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1">
+                      <i data-lucide="image" class="w-3.5 h-3.5"></i> Tải ảnh
+                      <input type="file" accept="image/*" capture="environment" onchange="handleCccdFileUpload(event, 'crm', '${side}')" class="hidden" />
+                    </label>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Họ và tên *</label>
+              <input id="tf-name" type="text" value="${escapeHtml(t?.fullName || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Số CCCD / Căn cước</label>
+              <input id="tf-cccd" type="text" value="${escapeHtml(t?.cccd || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-mono font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày sinh</label>
+              <input id="tf-dob" type="date" value="${escapeHtml(t?.dob || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Giới tính</label>
+              <select id="tf-gender" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="Nam" ${t?.gender === 'Nam' ? 'selected' : ''}>Nam</option>
+                <option value="Nữ" ${t?.gender === 'Nữ' ? 'selected' : ''}>Nữ</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Ngày cấp CCCD</label>
+              <input id="tf-cccdDate" type="date" value="${escapeHtml(t?.cccdDate || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Số điện thoại</label>
+              <input id="tf-phone" type="text" value="${escapeHtml(t?.phone || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Phòng thuê</label>
+              <select id="tf-room" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="">-- Chưa gán phòng --</option>
+                ${ALL_ROOM_IDS.map(id => `<option value="${id}" ${String(t?.room) === id ? 'selected' : ''}>Phòng ${id}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Vai trò trong phòng</label>
+              <select id="tf-role" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="Đại diện" ${(!t || t.roleInRoom === 'Đại diện') ? 'selected' : ''}>Đại diện (Người ký HĐ)</option>
+                <option value="Ở cùng" ${t?.roleInRoom === 'Ở cùng' ? 'selected' : ''}>Người ở cùng (2)</option>
+                <option value="Bảo trợ" ${t?.roleInRoom === 'Bảo trợ' ? 'selected' : ''}>Người liên quan / Bảo trợ (3)</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="font-bold text-slate-700 block mb-1">Nơi thường trú</label>
+              <input id="tf-address" type="text" value="${escapeHtml(t?.address || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Nghề nghiệp / Nơi công tác</label>
+              <input id="tf-job" type="text" value="${escapeHtml(t?.job || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Trạng thái tạm trú</label>
+              <select id="tf-resStatus" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="Chưa khai báo" ${(!t || t.residenceStatus === 'Chưa khai báo') ? 'selected' : ''}>Chưa khai báo</option>
+                <option value="Đang xử lý" ${t?.residenceStatus === 'Đang xử lý' ? 'selected' : ''}>Đang xử lý</option>
+                <option value="Đã đăng ký" ${t?.residenceStatus === 'Đã đăng ký' ? 'selected' : ''}>Đã đăng ký</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Hạn tạm trú</label>
+              <input id="tf-resExp" type="date" value="${escapeHtml(t?.residenceExpiry || '')}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-semibold" />
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeModal()" class="px-4 py-2.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">Hủy</button>
+            <button onclick="saveTenantForm('${escapeHtml(t?.id || '')}')" class="px-5 py-2.5 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white text-xs font-bold">Lưu hồ sơ</button>
+          </div>
+        </div>
+      `, 'max-w-2xl');
+    }
+
+    async function saveTenantForm(existingId) {
+      const fullName = (document.getElementById('tf-name').value || '').trim();
+      if (!fullName) { showToast('Vui lòng nhập Họ và tên khách thuê.', 'warning'); return; }
+      const obj = {
+        id: existingId || ('T_' + Date.now()),
+        fullName,
+        cccd: (document.getElementById('tf-cccd').value || '').trim(),
+        dob: document.getElementById('tf-dob').value,
+        gender: document.getElementById('tf-gender').value,
+        cccdDate: document.getElementById('tf-cccdDate').value,
+        cccdPlace: 'Cục Cảnh sát QLHC về TTXH',
+        phone: (document.getElementById('tf-phone').value || '').trim(),
+        room: document.getElementById('tf-room').value,
+        roleInRoom: document.getElementById('tf-role').value,
+        address: (document.getElementById('tf-address').value || '').trim(),
+        job: (document.getElementById('tf-job').value || '').trim(),
+        residenceStatus: document.getElementById('tf-resStatus').value,
+        residenceExpiry: document.getElementById('tf-resExp').value,
+        cccdFront: session.tempCccd.front || '',
+        cccdBack: session.tempCccd.back || ''
+      };
+
+      const idx = appState.tenants.findIndex(x => String(x.id) === String(obj.id));
+      if (idx >= 0) appState.tenants[idx] = obj;
+      else appState.tenants.push(obj);
+
+      if (obj.room && appState.rooms[obj.room]) {
+        appState.rooms[obj.room].active = true;
+        if (appState.rooms[obj.room].status === 'vacant') appState.rooms[obj.room].status = 'active';
+      }
+
+      await saveEncryptedVault();
+      await pushActionToSheet('saveTenant', { tenant: obj });
+      closeModal();
+      render();
+      showToast('Đã lưu hồ sơ khách thuê!', 'success');
+    }
+
+    function askDeleteTenant(id) {
+      const t = appState.tenants.find(x => String(x.id) === String(id));
+      showConfirmModal('Xóa hồ sơ khách thuê?', `Bạn chắc chắn muốn xóa hồ sơ "${t?.fullName || ''}"?`, async () => {
+        appState.tenants = appState.tenants.filter(x => String(x.id) !== String(id));
+        await saveEncryptedVault();
+        await pushActionToSheet('deleteTenant', { id });
+        render();
+        showToast('Đã xóa hồ sơ khách thuê.', 'success');
+      }, 'Xóa hồ sơ', true);
+    }
+
+    function importTenantsCsv(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const text = String(reader.result || '').replace(/^\uFEFF/, '');
+          const rows = parseCsvText(text);
+          if (rows.length < 2) { showToast('File CSV không có dữ liệu.', 'warning'); return; }
+          let added = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            const fullName = (r[3] || '').trim();
+            if (!fullName) continue;
+            let cccd = (r[1] || '').replace(/[^0-9]/g, '');
+            if (cccd && cccd.length >= 9 && cccd.length < 12) cccd = cccd.padStart(12, '0');
+            let phone = (r[10] || '').replace(/[^0-9]/g, '');
+            if (phone && phone.length === 9 && !phone.startsWith('0')) phone = '0' + phone;
+            const roomMatch = String(r[8] || '').match(/([2-7]0[1-3])/);
+            appState.tenants.push({
+              id: 'CSV_' + Date.now() + '_' + i,
+              cccd, fullName,
+              gender: (r[4] || '').trim(),
+              dob: (r[5] || '').trim(),
+              address: (r[6] || '').trim(),
+              cccdDate: (r[7] || '').trim(),
+              cccdPlace: 'Cục Cảnh sát QLHC về TTXH',
+              room: roomMatch ? roomMatch[1] : '',
+              phone,
+              roleInRoom: 'Đại diện',
+              job: (r[17] || '').trim(),
+              residenceStatus: 'Chưa khai báo',
+              residenceExpiry: ''
+            });
+            added++;
+          }
+          await saveEncryptedVault();
+          render();
+          showToast(`Đã nhập thành công ${added} hồ sơ từ CSV!`, 'success');
+        } catch (err) {
+          showToast('Lỗi đọc file CSV: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+      e.target.value = '';
+    }
+
+    function parseCsvText(str) {
+      const arr = [];
+      let quote = false, row = [''], col = 0;
+      for (let i = 0; i < str.length; i++) {
+        const c = str[i], next = str[i + 1];
+        if (c === '"' && quote && next === '"') { row[col] += '"'; i++; }
+        else if (c === '"') { quote = !quote; }
+        else if (c === ',' && !quote) { row[++col] = ''; }
+        else if ((c === '\r' && next === '\n' || c === '\n' || c === '\r') && !quote) {
+          if (c === '\r' && next === '\n') i++;
+          arr.push(row); row = ['']; col = 0;
+        } else { row[col] += c; }
+      }
+      if (row.some(x => x)) arr.push(row);
+      return arr;
+    }
+
+    function exportTenantsCsv() {
+      const headers = ['STT','Số CCCD','Họ và tên','Giới tính','Ngày sinh','Nơi thường trú','Ngày cấp CCCD','Phòng thuê','OTP','Số điện thoại','Vai trò','Nghề nghiệp','Trạng thái tạm trú','Hạn tạm trú'];
+      const lines = [headers.join(',')];
+      appState.tenants.forEach((t, idx) => {
+        const otp = t.room && appState.rooms[t.room] ? appState.rooms[t.room].otp : '';
+        const vals = [idx + 1, t.cccd, t.fullName, t.gender, t.dob, t.address, t.cccdDate, t.room, otp, t.phone, t.roleInRoom, t.job, t.residenceStatus, t.residenceExpiry];
+        lines.push(vals.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','));
+      });
+      const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `CRM_19_San_Quan_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    }
+
+    // --- TAB 3: TẠM TRÚ – TẠM VẮNG & MẪU CT01 ---
+    function renderResidenceTab() {
+      const assigned = (appState.tenants || []).filter(t => t.room);
+      return `
+        <div class="space-y-4">
+          <div class="neu-card p-5 space-y-3">
+            <h1 class="text-xl font-bold text-[#243B53]">Tạm trú & Mẫu CT01</h1>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+              <div class="p-3 rounded-2xl neu-inset">
+                <div class="font-bold text-[#6E59F0]">05 ngày làm việc</div>
+                <div class="text-[#6B8299] mt-0.5">Khai báo sau khi vào ở</div>
+              </div>
+              <div class="p-3 rounded-2xl neu-inset">
+                <div class="font-bold text-[#3B82F6]">Mốc 30 ngày</div>
+                <div class="text-[#6B8299] mt-0.5">Bắt buộc đăng ký tạm trú</div>
+              </div>
+              <div class="p-3 rounded-2xl neu-inset">
+                <div class="font-bold text-amber-600">Trước 15 ngày</div>
+                <div class="text-[#6B8299] mt-0.5">Gia hạn trước khi hết hạn</div>
+              </div>
+              <div class="p-3 rounded-2xl neu-inset">
+                <div class="font-bold text-rose-500">23h00 / 08h00</div>
+                <div class="text-[#6B8299] mt-0.5">Báo khách ngủ qua đêm</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            ${assigned.length ? assigned.map(t => {
+              const b = getResidenceBadge(t);
+              return `
+                <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center text-xs font-extrabold text-[#6E59F0] shrink-0">${escapeHtml(t.room)}</div>
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-sm font-bold text-[#243B53]">${escapeHtml(t.fullName)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${b.cls}">${b.label}</span>
+                      </div>
+                      <div class="text-xs text-[#6B8299] mt-0.5">Hạn tạm trú: <strong>${formatDateVN(t.residenceExpiry)}</strong></div>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-end gap-2 shrink-0">
+                    <button onclick="openTenantFormModal('${escapeHtml(t.id)}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#243B53] text-xs font-bold">Cập nhật</button>
+                    <button onclick="session.selectedContractRoom='${escapeHtml(t.room)}'; session.contractOpts={pl1:false,pl2:false,pl3:false,ct01:true}; switchLandlordTab('contract');" class="px-3.5 py-2 rounded-xl neu-btn-primary text-xs font-bold">Xuất CT01</button>
+                  </div>
+                </div>
+              `;
+            }).join('') : `<div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">Chưa có cư dân nào được gán phòng.</div>`}
+          </div>
+        </div>
+      `;
+    }
+
+    // --- TAB 4: HỢP ĐỒNG NGUYÊN VĂN (13 ĐIỀU + PHỤ LỤC 01, 02, 03 + MẪU CT01) ---
+    function buildFullContractHtml(roomId) {
+      const r = appState.rooms[roomId] || {};
+      const tenants = getRoomTenants(roomId);
+      const t1 = tenants[0] || {};
+      const t2 = tenants[1] || {};
+      const t3 = tenants[2] || {};
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const yyyy = today.getFullYear();
+      const rentStr = r.rent ? Number(r.rent).toLocaleString('vi-VN') + ' VNĐ' : '...........................';
+      const rentWords = r.rent ? numberToVietnameseWords(r.rent) : '……………………………………………………………………….';
+      const depStr = r.deposit ? Number(r.deposit).toLocaleString('vi-VN') : '………………………………';
+      const depMonths = (r.rent && r.deposit) ? Math.round((r.deposit / r.rent) * 10) / 10 : '…';
+
+      const personBlock = (idx, t, title) => `
+        <p style="margin-top:6px;"><strong>${title}</strong></p>
+        <table>
+          <tr>
+            <td style="width:55%;">Ông/Bà (${idx}): <strong>${escapeHtml(t.fullName || '.................................')}</strong></td>
+            <td style="width:45%;">Số điện thoại: <strong>${escapeHtml(t.phone || '.....................')}</strong></td>
+          </tr>
+          <tr><td colspan="2">Ngày tháng năm sinh: <strong>${t.dob ? formatDateVN(t.dob) : '....../....../..........'}</strong></td></tr>
+          <tr><td colspan="2">CMND/CCCD/Hộ chiếu số: <strong>${escapeHtml(t.cccd || '........................................')}</strong></td></tr>
+          <tr>
+            <td>Do: ${escapeHtml(t.cccdPlace || 'Cục Cảnh sát QLHC về TTXH')}</td>
+            <td>Cấp ngày: ${t.cccdDate ? formatDateVN(t.cccdDate) : '....../....../..........'}</td>
+          </tr>
+        </table>
+      `;
+
+      let html = `
+        <div style="text-align:center;">
+          <p style="text-align:center;font-weight:bold;font-size:15px;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+          <p style="text-align:center;font-weight:bold;text-decoration:underline;">Độc lập - Tự do - Hạnh phúc</p>
+          <p style="text-align:center;">o0o</p>
+          <h2 style="text-align:center;font-size:18px;font-weight:bold;margin-top:8px;">HỢP ĐỒNG THUÊ PHÒNG TRỌ</h2>
+        </div>
+        <p><em>Căn cứ Bộ Luật Dân sự của Quốc Hội nước CHXHCN Việt Nam năm 2015;</em></p>
+        <p><em>Căn cứ nhu cầu và khả năng của các Bên;</em></p>
+        <p>Hôm nay, ngày ${dd} tháng ${mm} năm ${yyyy}, Tại địa chỉ: <strong>Số nhà 19 – ngõ Sân Quần – Phường Văn Miếu Quốc Tử Giám, Tp. Hà Nội</strong> chúng tôi gồm:</p>
+
+        <p style="margin-top:8px;"><strong>BÊN CHO THUÊ: (Sau đây gọi tắt là Bên A)</strong></p>
+        <p><strong>Ông (1): Vũ Duy An.</strong> Số điện thoại: 0936631223.</p>
+        <p>Sinh ngày: 21/04/1988. CCCD số: 001088040769 do Cục Cảnh sát Quản lý Hành chính về Trật tự Xã hội cấp ngày 18/09/2022.</p>
+        <p><strong>Đồng sở hữu:</strong></p>
+        <p><strong>Ông (2): Nguyễn Văn Sơn.</strong> Số điện thoại: 0981502345.</p>
+        <p>Sinh ngày: 18/11/1991. CCCD số: 030091009045 do Cục Cảnh sát Quản lý Hành chính về Trật tự Xã hội cấp ngày 03/05/2023.</p>
+        <p>Là chủ hợp pháp của căn nhà tại địa chỉ nói trên, tại thời điểm lập Hợp đồng này.</p>
+
+        <p style="margin-top:8px;"><strong>BÊN THUÊ: (Sau đây gọi tắt là Bên B), Gồm:</strong></p>
+        ${personBlock(1, t1, 'Người đại diện Bên B trao đổi với Bên A:')}
+        ${personBlock(2, t2, 'Người thuê phòng liên quan, người ở cùng (2):')}
+        ${personBlock(3, t3, 'Người thuê phòng liên quan hoặc người bảo trợ (3):')}
+
+        <p>Hai Bên tự nguyện cùng nhau lập và ký Hợp đồng này để thực hiện việc cho thuê tài sản theo các thỏa thuận sau đây:</p>
+
+        <h3><strong>ĐIỀU 1: ĐỐI TƯỢNG VÀ NỘI DUNG HỢP ĐỒNG</strong></h3>
+        <p>Bên A đồng ý cho Bên B thuê phòng: <strong>${escapeHtml(roomId)}</strong> ở tại Số nhà 19 – ngõ Sân Quần – Phường Văn Miếu Quốc Tử Giám, Tp. Hà Nội.</p>
+        <p>Với số lượng người đăng ký: <strong>${tenants.length || '……'}</strong>, với số lượng xe đăng ký: <strong>${r.vehicles || '……'}</strong>.</p>
+        <p>Phần dùng riêng là phòng nêu trên, với diện tích sử dụng thực tế: 28-30 (m²). Phần dùng chung, là hành lang, thang máy, nhà để xe.</p>
+        <p>Tình trạng phòng tại thời điểm bàn giao: Điện, nước, thiết bị, nội thất, đồng hồ riêng và các trang thiết bị đi kèm được liệt kê tại Phụ lục 02: Biên bản bàn giao tài sản đính kèm Hợp đồng này.</p>
+
+        <h3><strong>ĐIỀU 2: THỜI HẠN, MỤC ĐÍCH THUÊ</strong></h3>
+        <p>Thời hạn thuê là <strong>${r.termMonths || '……'}</strong> tháng, được tính từ "Ngày bắt đầu" đến "Ngày kết thúc" chi tiết như sau: Ngày bắt đầu: <strong>${r.startDate ? formatDateVN(r.startDate) : '…/…/……'}</strong> — Ngày kết thúc: <strong>${r.endDate ? formatDateVN(r.endDate) : '…/…/……'}</strong>.</p>
+        <p>Mục đích thuê: chỉ sử dụng để ở.</p>
+        <ul>
+          <li>Người thuê chỉ được sử dụng phòng trọ vào mục đích ở. Nghiêm cấm mọi hành vi sử dụng phòng trọ sai công năng, bao gồm:</li>
+          <li>Không được dùng phòng trọ làm kho chứa hàng hóa hoặc vật dụng không phục vụ sinh hoạt cá nhân.</li>
+          <li>Không được kinh doanh, buôn bán dưới bất kỳ hình thức nào.</li>
+          <li>Không được cho thuê lại, cho mượn hoặc chuyển quyền sử dụng phòng trọ cho người khác khi chưa có sự đồng ý bằng văn bản của chủ nhà.</li>
+          <li>Không được chứa, tàng trữ hàng hóa, vật liệu, chất dễ cháy nổ hoặc gây mất an toàn.</li>
+          <li>Không được tổ chức lớp học, đào tạo, sinh hoạt tập thể hay các hoạt động tụ tập có tính chất thường xuyên.</li>
+          <li>Không được thực hiện, lưu trữ, tuyên truyền hoặc tham gia các hành vi chống phá Nhà nước, vi phạm pháp luật hoặc trái thuần phong mỹ tục.</li>
+          <li>Mọi hành vi vi phạm các quy định trên đều được xem là vi phạm nghiêm trọng hợp đồng thuê và có thể bị chấm dứt hợp đồng ngay lập tức, đồng thời người thuê phải chịu hoàn toàn trách nhiệm trước pháp luật và bồi thường thiệt hại.</li>
+        </ul>
+
+        <h3><strong>ĐIỀU 3: GIÁ TIỀN THUÊ VÀ CHI PHÍ KHÁC</strong></h3>
+        <p><strong>3.1 Giá thuê phòng</strong> là <strong>${rentStr}</strong> /tháng (chưa bao gồm tiền điện, nước và các chi phí dịch vụ khác).</p>
+        <p>(Bằng chữ: <em>${rentWords}</em>)</p>
+        <p>- Trong thời gian thuê, bên A cam kết không tăng giá tiền phòng. Việc tăng giá sẽ được bên A báo cho bên B trước 1 tháng trước khi hết thời hạn thuê. Bên A cam kết không tăng giá thuê phòng quá 10%/năm.</p>
+        <p>- Hết thời hạn trên, nếu hai bên không ký hợp đồng mới nhưng Bên B vẫn tiếp tục ở và Bên A không phản đối, hợp đồng được hiểu là gia hạn theo tháng với các điều khoản không thay đổi.</p>
+        <p>- Bên B thanh toán vào ngày <strong>${r.paymentDay || '05'}</strong> hàng tháng.</p>
+        <p><strong>3.2 Chi phí khác:</strong></p>
+        <ul>
+          <li>Điện: 4.000 VNĐ / KWh</li>
+          <li>Nước: 150.000 VNĐ / người / tháng.</li>
+          <li>Internet: 100.000 VNĐ / phòng / tháng.</li>
+          <li>Dịch vụ khác: 200.000 VNĐ / người / tháng.</li>
+        </ul>
+
+        <h3><strong>ĐIỀU 4: ĐẶT CỌC VÀ HÌNH THỨC THANH TOÁN HÀNG THÁNG</strong></h3>
+        <p><strong>4.1 Tiền đặt cọc:</strong> <strong>${depStr} đồng</strong> (tương đương <strong>${depMonths}</strong> tháng tiền thuê).</p>
+        <p>- Khi chấm dứt hợp đồng, Bên A hoàn trả toàn bộ tiền cọc cho Bên B trong vòng 5 ngày sau khi trừ các khoản công nợ điện nước, phí sinh hoạt hoặc chi phí sửa chữa hư hỏng do lỗi Bên B. Hao mòn tự nhiên không bị trừ.</p>
+        <p><strong>4.2 Phương thức thanh toán:</strong> Sau 3 ngày kể từ nhận được thông báo, Bên B thanh toán qua một trong hai tài khoản:</p>
+        <table>
+          <tr>
+            <td style="width:50%;">- Chủ tài khoản: <strong>Vũ Duy An</strong><br/>- Số tài khoản: <strong>000474609999</strong><br/>- Ngân hàng: <strong>LPBank</strong></td>
+            <td style="width:50%;">- Chủ tài khoản: <strong>Nguyễn Văn Sơn</strong><br/>- Số tài khoản: <strong>03101014025588</strong><br/>- Ngân hàng: <strong>MSB</strong></td>
+          </tr>
+        </table>
+
+        <h3><strong>ĐIỀU 5. QUYỀN KIỂM TRA PHÒNG</strong></h3>
+        <p>- Bên A có quyền kiểm tra tình trạng phòng định kỳ hoặc đột xuất khi có dấu hiệu vi phạm, báo trước tối thiểu 1 giờ, trừ trường hợp khẩn cấp.</p>
+
+        <h3><strong>ĐIỀU 6. NGHĨA VỤ CƯ TRÚ, KHAI BÁO TẠM TRÚ - TẠM VẮNG</strong></h3>
+        <p><strong>6.1</strong> Bên B cam kết thực hiện đầy đủ khai báo tạm trú, điều chỉnh thông tin cư trú và tạm vắng trong thời hạn không quá 05 ngày làm việc kể từ ngày phát sinh sự kiện.</p>
+        <p><strong>6.2 – 6.5</strong> Trường hợp Bên B vi phạm nghĩa vụ cư trú dẫn đến Bên A bị xử phạt hành chính hoặc phát sinh chi phí, Bên B phải bồi thường 100% trong vòng 05 ngày hoặc khấu trừ vào tiền đặt cọc. Tái phạm từ lần thứ 2 trở lên Bên A có quyền đơn phương chấm dứt hợp đồng.</p>
+
+        <h3><strong>ĐIỀU 7: QUYỀN VÀ NGHĨA VỤ CỦA BÊN A</strong></h3>
+        <p>Bên A có quyền yêu cầu thanh toán đúng hạn, kiểm tra mục đích sử dụng phòng và tuân thủ nội quy; có nghĩa vụ bàn giao phòng đúng cam kết, đảm bảo quyền sử dụng hợp pháp và hỗ trợ sửa chữa chất lượng công trình.</p>
+
+        <h3><strong>ĐIỀU 8: QUYỀN VÀ NGHĨA VỤ CỦA BÊN B</strong></h3>
+        <p>Bên B có quyền yêu cầu cung cấp đủ dịch vụ đã ký; có trách nhiệm thanh toán đúng hạn, giữ gìn tài sản, không tự ý cho thuê lại và chịu trách nhiệm trước pháp luật về mọi hoạt động tại phòng.</p>
+
+        <h3><strong>ĐIỀU 9: CHẤM DỨT HỢP ĐỒNG TRƯỚC THỜI HẠN</strong></h3>
+        <p>Hai bên có quyền thương lượng chấm dứt trước hạn khi nhà thuộc quy hoạch giải tỏa, chất lượng phòng biến đổi nghiêm trọng không khắc phục được, hoặc Bên B vi phạm pháp luật/an ninh.</p>
+
+        <h3><strong>ĐIỀU 10: TRÁCH NHIỆM VẬT CHẤT DO VI PHẠM HỢP ĐỒNG</strong></h3>
+        <p>- Chậm nộp tiền phòng quá 10 ngày phạt 1/2 tháng tiền thuê; quá 15 ngày phạt 1 tháng tiền thuê; quá 10 ngày Bên A có quyền đơn phương chấm dứt hợp đồng.</p>
+        <p>- Khi sắp hết hạn, nếu Bên B không thuê nữa phải báo trước 1 tháng để được hoàn trả tiền cọc.</p>
+
+        <h3><strong>ĐIỀU 11. SỰ KIỆN BẤT KHẢ KHÁNG</strong></h3>
+        <p>Các sự kiện khách quan không thể lường trước (thiên tai, hỏa hoạn lớn, dịch bệnh, quyết định hành chính) được miễn trách nhiệm phát sinh trực tiếp từ sự kiện đó.</p>
+
+        <h3><strong>ĐIỀU 12. LUẬT ÁP DỤNG VÀ GIẢI QUYẾT TRANH CHẤP</strong></h3>
+        <p>Hợp đồng điều chỉnh theo pháp luật Việt Nam. Tranh chấp ưu tiên thương lượng, hòa giải trong 30 ngày trước khi khởi kiện tại Tòa án có thẩm quyền.</p>
+
+        <h3><strong>ĐIỀU 13: CAM KẾT CHUNG</strong></h3>
+        <p>Hợp đồng gồm 13 điều, lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ 01 bản, kèm theo Phụ lục 01, 02, 03 là bộ phận không tách rời.</p>
+        <table class="no-border-table" style="margin-top:16px;">
+          <tr>
+            <td style="width:50%;text-align:center;"><strong>ĐẠI DIỆN BÊN A</strong><br/><em>(Ký và ghi rõ họ tên)</em><br/><br/><br/><br/></td>
+            <td style="width:50%;text-align:center;"><strong>ĐẠI DIỆN BÊN B</strong><br/><em>(Ký và ghi rõ họ tên)</em><br/><br/><br/><br/></td>
+          </tr>
+        </table>
+      `;
+
+      if (session.contractOpts.pl1) {
+        html += `
+          <hr style="margin:24px 0;border-top:1px dashed #64748b;"/>
+          <h2 style="text-align:center;font-weight:bold;">PHỤ LỤC 01: CAM KẾT CƯ TRÚ</h2>
+          <p style="text-align:center;"><em>(Kèm theo Hợp đồng thuê phòng ${escapeHtml(roomId)} / ${yyyy} / HĐT)</em></p>
+          <p><strong>1. Giới hạn:</strong> Tối đa 02 người/phòng và 02 xe máy/phòng (trừ thỏa thuận khác tại Điều 1).</p>
+          <p><strong>2. Khách đến thăm:</strong> Từ 06h00 đến trước 23h00 cùng ngày, không để xe sau 23h00.</p>
+          <p><strong>3. Thông báo lưu trú (Luật Cư trú 2020):</strong> Lưu trú trước 23h00 báo trước 23h00 cùng ngày; sau 23h00 báo trước 08h00 sáng hôm sau.</p>
+          <p><strong>4. Lưu trú vượt tiêu chuẩn:</strong> Phải báo trước Bên A, không quá 03 đêm liên tiếp và 05 đêm/tháng; phụ phí <strong>20.000đ/người/đêm</strong> và <strong>10.000đ/xe/đêm</strong>.</p>
+        `;
+      }
+
+      if (session.contractOpts.pl2) {
+        const assets = [
+          ['1','Tường + sàn phòng','','1','Sạch sẽ'],['2','Vòi sen','Cái','1','Sử dụng tốt'],['3','Chậu rửa mặt','Bộ','1','Sử dụng tốt'],
+          ['4','Gương + kệ kính','Bộ','1','Sử dụng tốt'],['5','Xí bệt','Bộ','1','Sử dụng tốt'],['6','Móc treo Inox','Cái','1','Sử dụng tốt'],
+          ['7','Bình nóng lạnh','Bình','1','Mới'],['8','Tủ bếp','Bộ','1','Mới'],['9','Giường','Cái','1','Mới'],
+          ['10','Rèm cửa','Bộ','1','Rèm cầu vồng / rèm vải'],['11','Sofa + bàn trà / bàn ăn','Bộ','1','Mới và sử dụng tốt'],['12','Tủ gỗ','Cái','1','Mới và sử dụng tốt'],
+          ['13','Tivi','Chiếc','1','Mới và sử dụng tốt'],['14','Điều hòa','Bộ','1','Mới và sử dụng tốt'],['15','Tủ lạnh','Bộ','1','Mới và sử dụng tốt'],
+          ['16','Máy giặt','Bộ','1','Mới và sử dụng tốt'],['17','Bếp từ','Cái','1','Bếp từ đơn – mới sử dụng tốt']
+        ];
+        html += `
+          <hr style="margin:24px 0;border-top:1px dashed #64748b;"/>
+          <h2 style="text-align:center;font-weight:bold;">PHỤ LỤC 02: BIÊN BẢN BÀN GIAO TÀI SẢN — PHÒNG ${escapeHtml(roomId)}</h2>
+          <table>
+            <thead><tr><th>TT</th><th>Tên tài sản</th><th>ĐVT</th><th>SL</th><th>Tình trạng</th></tr></thead>
+            <tbody>${assets.map(a => `<tr><td style="text-align:center;">${a[0]}</td><td>${a[1]}</td><td style="text-align:center;">${a[2]}</td><td style="text-align:center;">${a[3]}</td><td>${a[4]}</td></tr>`).join('')}</tbody>
+          </table>
+        `;
+      }
+
+      if (session.contractOpts.pl3) {
+        html += `
+          <hr style="margin:24px 0;border-top:1px dashed #64748b;"/>
+          <h2 style="text-align:center;font-weight:bold;">PHỤ LỤC 03: NỘI QUY TÒA NHÀ</h2>
+          <p><strong>I–IV. Cư trú, An ninh & Tiếng ồn:</strong> Khai báo tạm trú đúng hạn; không tự ý cấp mã khóa/sao chép chìa; giữ yên tĩnh tuyệt đối từ 23h00 – 06h00.</p>
+          <p><strong>V–VII. PCCC & Vệ sinh:</strong> Không kinh doanh, không bếp gas mini/bếp than, không hút thuốc trong tòa nhà, không để đồ tại hành lang/lối thoát hiểm.</p>
+          <table>
+            <tr><th>Mức bồi thường thiệt hại thực tế</th><td>200.000đ</td><td>300.000đ</td><td>500.000đ</td><td>Chấm dứt HĐ, dời nhà trong 24h</td></tr>
+            <tr><th>Điều khoản vi phạm</th><td>Mục 3, 5</td><td>Mục 6, 7</td><td>Mục 2</td><td>Mục 4, 6</td></tr>
+          </table>
+        `;
+      }
+
+      if (session.contractOpts.ct01) {
+        const others = tenants.slice(1);
+        html += `
+          <hr style="margin:24px 0;border-top:1px dashed #64748b;"/>
+          <p style="text-align:right;font-size:12px;"><em>Mẫu CT01 ban hành kèm theo Thông tư số 53/2025/TT-BCA ngày 01/7/2025 của Bộ trưởng Bộ Công an</em></p>
+          <p style="text-align:center;font-weight:bold;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br/><span style="text-decoration:underline;">Độc lập – Tự do – Hạnh phúc</span></p>
+          <h2 style="text-align:center;font-weight:bold;">TỜ KHAI THAY ĐỔI THÔNG TIN CƯ TRÚ</h2>
+          <p>Kính gửi: Công an Phường Văn Miếu – Quốc Tử Giám, Tp. Hà Nội</p>
+          <p>1. Họ, chữ đệm và tên khai sinh: <strong>${escapeHtml(t1.fullName || '........................................')}</strong></p>
+          <p>2. Ngày, tháng, năm sinh: <strong>${t1.dob ? formatDateVN(t1.dob) : '..../..../......'}</strong> &nbsp;&nbsp; 3. Giới tính: <strong>${escapeHtml(t1.gender || '......')}</strong></p>
+          <p>4. Số định danh cá nhân (CCCD): <strong>${escapeHtml(t1.cccd || '....................................')}</strong></p>
+          <p>5. Số điện thoại liên hệ: <strong>${escapeHtml(t1.phone || '........................')}</strong></p>
+          <p>6. Nơi thường trú: ${escapeHtml(t1.address || '......................................................................')}</p>
+          <p>7. Chủ sở hữu chỗ ở hợp pháp: <strong>Vũ Duy An</strong> (CCCD: 001088040769) &amp; <strong>Nguyễn Văn Sơn</strong> (CCCD: 030091009045)</p>
+          <p>8. Nội dung đề nghị: <strong>Đăng ký tạm trú tại Phòng ${escapeHtml(roomId)}, Số nhà 19 ngõ Sân Quần, Phường Văn Miếu – Quốc Tử Giám, Tp. Hà Nội.</strong></p>
+          <p>9. Những thành viên cùng thay đổi:</p>
+          <table>
+            <thead><tr><th>TT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Số định danh cá nhân</th><th>Quan hệ</th></tr></thead>
+            <tbody>
+              ${others.length ? others.map((o, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(o.fullName)}</td><td>${formatDateVN(o.dob)}</td><td>${escapeHtml(o.gender)}</td><td>${escapeHtml(o.cccd)}</td><td>Ở cùng</td></tr>`).join('') : '<tr><td>1</td><td></td><td></td><td></td><td></td><td></td></tr>'}
+            </tbody>
+          </table>
+          <table class="no-border-table" style="margin-top:12px;">
+            <tr>
+              <td style="width:50%;text-align:center;"><strong>Ý KIẾN CHỦ SỞ HỮU CHỖ Ở HỢP PHÁP</strong><br/><em>(Đồng ý cho đăng ký tạm trú)</em><br/><br/><br/></td>
+              <td style="width:50%;text-align:center;"><strong>NGƯỜI KÊ KHAI</strong><br/><em>(Ký và ghi rõ họ tên)</em><br/><br/><br/></td>
+            </tr>
+          </table>
+        `;
+      }
+      return html;
+    }
+
+    function renderContractTab() {
+      const roomId = session.selectedContractRoom || getActiveRoomIds()[0] || '201';
+      const draft = appState.contractDrafts?.[roomId];
+      const htmlContent = draft || buildFullContractHtml(roomId);
+
+      return `
+        <div class="space-y-4">
+          <div class="neu-card p-5 space-y-4 no-print">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 class="text-xl font-bold text-[#243B53]">Hợp đồng mẫu 19 Sân Quần</h1>
+                <p class="text-xs text-[#6B8299] mt-0.5">Chạm trực tiếp vào văn bản bên dưới để chỉnh sửa trước khi xuất.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="saveContractDraft('${roomId}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#243B53] text-xs font-bold">Lưu sửa</button>
+                <button onclick="resetContractDraft('${roomId}')" class="px-3.5 py-2 rounded-xl neu-btn text-amber-600 text-xs font-bold">Mẫu gốc</button>
+                <button onclick="exportContractWord('${roomId}')" class="px-3.5 py-2 rounded-xl neu-btn text-[#3B82F6] text-xs font-bold">Word</button>
+                <button onclick="exportContractPdf('${roomId}')" class="px-4 py-2 rounded-xl neu-btn-primary text-xs font-bold">Xuất PDF</button>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 pt-1 text-xs">
+              <select onchange="session.selectedContractRoom=this.value; render();" class="neu-input px-3.5 py-2 rounded-xl font-bold text-[#243B53]">
+                ${getActiveRoomIds().map(id => `<option value="${id}" ${id === roomId ? 'selected' : ''}>Phòng ${id} (${getRoomTenants(id).length} người)</option>`).join('')}
+              </select>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer font-semibold text-[#243B53]">
+                <input type="checkbox" ${session.contractOpts.pl1 ? 'checked' : ''} onchange="session.contractOpts.pl1=this.checked; delete appState.contractDrafts['${roomId}']; render();" class="accent-[#7C62F6]" /> PL01
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer font-semibold text-[#243B53]">
+                <input type="checkbox" ${session.contractOpts.pl2 ? 'checked' : ''} onchange="session.contractOpts.pl2=this.checked; delete appState.contractDrafts['${roomId}']; render();" class="accent-[#7C62F6]" /> PL02
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer font-semibold text-[#243B53]">
+                <input type="checkbox" ${session.contractOpts.pl3 ? 'checked' : ''} onchange="session.contractOpts.pl3=this.checked; delete appState.contractDrafts['${roomId}']; render();" class="accent-[#7C62F6]" /> PL03
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer font-semibold text-[#243B53]">
+                <input type="checkbox" ${session.contractOpts.ct01 ? 'checked' : ''} onchange="session.contractOpts.ct01=this.checked; delete appState.contractDrafts['${roomId}']; render();" class="accent-[#7C62F6]" /> CT01
+              </label>
+              <div class="ml-auto flex items-center gap-1.5">
+                <button type="button" onclick="document.execCommand('bold')" class="w-8 h-8 rounded-xl neu-btn font-bold">B</button>
+                <button type="button" onclick="document.execCommand('italic')" class="w-8 h-8 rounded-xl neu-btn italic">I</button>
+                <button type="button" onclick="document.execCommand('underline')" class="w-8 h-8 rounded-xl neu-btn underline">U</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="contract-editor" contenteditable="true" class="contract-paper max-w-4xl mx-auto p-5 sm:p-10 rounded-[24px] shadow-md border border-white">
+            ${htmlContent}
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveContractDraft(roomId) {
+      const el = document.getElementById('contract-editor');
+      if (!el) return;
+      appState.contractDrafts[roomId] = el.innerHTML;
+      await saveEncryptedVault();
+      showToast(`Đã lưu bản chỉnh sửa Hợp đồng Phòng ${roomId}!`, 'success');
+    }
+
+    async function resetContractDraft(roomId) {
+      delete appState.contractDrafts[roomId];
+      await saveEncryptedVault();
+      render();
+      showToast('Đã khôi phục nguyên bản Hợp đồng từ dữ liệu CRM.', 'info');
+    }
+
+    function exportContractWord(roomId) {
+      const html = document.getElementById('contract-editor')?.innerHTML || buildFullContractHtml(roomId);
+      const doc = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="utf-8"><style>
+          body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.5;}
+          table{width:100%;border-collapse:collapse;margin:6px 0;}
+          td,th{border:1px solid #333;padding:5px 7px;}
+          .no-border-table td{border:none;}
+          p{text-align:justify;margin:4px 0;}
+        </style></head><body>${html}</body></html>`;
+      const blob = new Blob(['\ufeff', doc], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `HopDong_Phong_${roomId}_19SanQuan.doc`;
+      a.click();
+      showToast(`Đang tải file Word Hợp đồng Phòng ${roomId}...`, 'success');
+    }
+
+    function exportContractPdf(roomId) {
+      const html = document.getElementById('contract-editor')?.innerHTML || buildFullContractHtml(roomId);
+      const win = window.open('', '_blank');
+      if (!win) { window.print(); return; }
+      win.document.write(`
+        <!DOCTYPE html><html><head><meta charset="utf-8"><title>Hợp đồng Phòng ${roomId}</title>
+        <style>
+          @page{size:A4;margin:18mm;}
+          body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.5;color:#111;}
+          table{width:100%;border-collapse:collapse;margin:8px 0;}
+          td,th{border:1px solid #333;padding:5px 8px;}
+          .no-border-table td{border:none;}
+          p{text-align:justify;margin:4px 0;}
+        </style></head><body>${html}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 300);
+    }
+
+    // --- TAB 5: HỢP ĐỒNG HẾT HIỆU LỰC ---
+    function renderExpiredTab() {
+      const list = appState.expiredContracts || [];
+      return `
+        <div class="space-y-4">
+          <div class="neu-card p-5">
+            <h1 class="text-xl font-bold text-[#243B53]">Hợp đồng Hết hiệu lực (${list.length})</h1>
+            <p class="text-xs text-[#6B8299] mt-0.5">Lưu trữ khách đã rời đi và tình trạng hoàn tiền cọc.</p>
+          </div>
+
+          <div class="space-y-3">
+            ${list.length ? list.map(e => `
+              <div class="neu-card-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-start gap-3">
+                  <div class="w-11 h-11 rounded-2xl neu-inset flex items-center justify-center font-extrabold text-[#6B8299] shrink-0">${escapeHtml(e.roomId)}</div>
+                  <div>
+                    <div class="text-sm font-bold text-[#243B53]">${escapeHtml(e.tenantNames)}</div>
+                    <div class="text-[#6B8299] mt-0.5">Rời đi: <strong class="text-rose-500">${formatDateVN(e.moveOutDate)}</strong> · HĐ: ${formatDateVN(e.startDate)} → ${formatDateVN(e.endDate)}</div>
+                    <div class="text-[#243B53] font-semibold mt-1">${escapeHtml(e.depositStatus)} ${e.notes ? '· ' + escapeHtml(e.notes) : ''}</div>
+                  </div>
+                </div>
+                <button onclick="deleteExpiredRecord('${escapeHtml(e.id)}')" class="self-end sm:self-center px-3.5 py-2 rounded-xl neu-btn text-rose-500 font-bold">Xóa</button>
+              </div>
+            `).join('') : `<div class="neu-card-sm p-10 text-center text-xs text-[#6B8299]">Chưa có hợp đồng hết hiệu lực nào.</div>`}
+          </div>
+        </div>
+      `;
+    }
+
+    async function deleteExpiredRecord(id) {
+      appState.expiredContracts = (appState.expiredContracts || []).filter(x => x.id !== id);
+      await saveEncryptedVault();
+      render();
+      showToast('Đã xóa bản ghi lịch sử.', 'info');
+    }
+
+    // --- TAB 6: QUẢN LÝ MÃ OTP DUY NHẤT ---
+    function renderOtpTab() {
+      const ids = getActiveRoomIds();
+      return `
+        <div class="space-y-4">
+          <div class="neu-card p-5">
+            <h1 class="text-xl font-bold text-[#243B53]">Mã OTP từng phòng</h1>
+            <p class="text-xs text-[#6B8299] mt-0.5">Mỗi phòng dùng 1 OTP duy nhất, tự động đồng bộ vào Cột J trên Google Sheet.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${ids.map(id => {
+              const r = appState.rooms[id];
+              const tenants = getRoomTenants(id);
+              return `
+                <div class="neu-card-sm p-4 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-10 h-10 rounded-xl neu-inset flex items-center justify-center font-extrabold text-xs text-[#243B53]">${id}</div>
+                      <div>
+                        <div class="text-sm font-bold text-[#243B53]">Phòng ${id}</div>
+                        <div class="text-[11px] text-[#6B8299]">${tenants.length} cư dân</div>
+                      </div>
+                    </div>
+                    <button onclick="toggleLockOtp('${id}')" class="px-3 py-1.5 rounded-xl neu-btn text-[11px] font-bold ${r.otpLocked ? 'text-rose-500' : 'text-emerald-600'}">
+                      ${r.otpLocked ? 'Đang khóa' : 'Đang mở'}
+                    </button>
+                  </div>
+                  <div class="flex gap-2">
+                    <input id="otp-val-${id}" type="text" maxlength="8" value="${escapeHtml(r.otp || '')}" placeholder="Chưa có OTP"
+                      class="neu-input flex-1 px-3.5 py-2.5 rounded-xl font-mono text-sm font-bold tracking-wider text-center" />
+                    <button onclick="genRandomOtp('${id}')" class="px-3 py-2 rounded-xl neu-btn text-[#243B53] text-xs font-bold">Tạo</button>
+                  </div>
+                  <div class="flex gap-2">
+                    <button onclick="saveRoomOtp('${id}')" class="flex-1 py-2.5 rounded-xl neu-btn-primary text-xs font-bold">Lưu & Cột J</button>
+                    <button onclick="copyZaloOtp('${id}')" class="px-3.5 py-2.5 rounded-xl neu-btn text-[#6E59F0] text-xs font-bold">Copy</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function genRandomOtp(roomId) {
+      let code = '';
+      const used = new Set(ALL_ROOM_IDS.filter(x => x !== roomId).map(x => appState.rooms[x]?.otp).filter(Boolean));
+      for (let i = 0; i < 30; i++) {
+        code = String(Math.floor(100000 + Math.random() * 900000));
+        if (!used.has(code)) break;
+      }
+      const el = document.getElementById('otp-val-' + roomId);
+      if (el) el.value = code;
+    }
+
+    async function saveRoomOtp(roomId) {
+      const val = (document.getElementById('otp-val-' + roomId)?.value || '').trim();
+      if (val) {
+        const dup = ALL_ROOM_IDS.find(id => id !== roomId && appState.rooms[id]?.otp === val);
+        if (dup) {
+          showToast(`Mã OTP "${val}" đang trùng với Phòng ${dup}! Vui lòng chọn mã duy nhất.`, 'error');
+          return;
+        }
+      }
+      appState.rooms[roomId].otp = val;
+      appState.rooms[roomId].otpLocked = false;
+      await saveEncryptedVault();
+      await pushActionToSheet('updateOtp', { roomId, otp: val, locked: false });
+      render();
+      showToast(`Đã lưu OTP Phòng ${roomId} và đồng bộ lên Cột J Google Sheet!`, 'success');
+    }
+
+    async function toggleLockOtp(roomId) {
+      const r = appState.rooms[roomId];
+      r.otpLocked = !r.otpLocked;
+      await saveEncryptedVault();
+      await pushActionToSheet('updateOtp', { roomId, otp: r.otp || '', locked: r.otpLocked });
+      render();
+      showToast(r.otpLocked ? `Đã khóa OTP Phòng ${roomId}.` : `Đã mở khóa OTP Phòng ${roomId}.`, 'info');
+    }
+
+    function copyZaloOtp(roomId) {
+      const otp = appState.rooms[roomId]?.otp;
+      if (!otp) { showToast('Phòng này chưa có mã OTP.', 'warning'); return; }
+      const msg = `Chào bạn, Ban quản lý tòa nhà 19 Sân Quần gửi bạn mã OTP đăng nhập Cổng Khách thuê Phòng ${roomId}: ${otp}\n(Chỉ cần chọn "Tôi là Khách thuê" và nhập mã OTP này để xem hạn hợp đồng, tạm trú & khai báo người thân lưu trú).`;
+      copyTextSafe(msg, `Đã copy tin nhắn OTP Phòng ${roomId} để gửi Zalo!`);
+    }
+
+    // --- CHUÔNG THÔNG BÁO KHAI BÁO LƯU TRÚ ---
+    function openGuestNotificationsModal() {
+      const list = appState.guestStays || [];
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-extrabold text-slate-900">Thông báo Người thân / Bạn bè lưu trú (${list.length})</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Danh sách khách thuê gửi khai báo kèm ảnh chụp CCCD 2 mặt.</p>
+            </div>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <div class="space-y-3 max-h-[68vh] overflow-y-auto pr-1">
+            ${list.length ? list.map(g => `
+              <div class="p-4 rounded-2xl border ${g.status === 'Mới gửi' ? 'bg-amber-50/70 border-amber-200' : 'bg-slate-50 border-slate-200'} space-y-2.5 text-xs">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <span class="px-2.5 py-0.5 rounded-full bg-[#156B68] text-white font-extrabold">Phòng ${escapeHtml(g.roomId)}</span>
+                    <span class="ml-2 font-extrabold text-slate-900 text-sm">${escapeHtml(g.guestName)}</span>
+                    <span class="text-slate-500">(${escapeHtml(g.relation || 'Người thân')})</span>
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full font-bold ${g.status === 'Đã xác nhận' ? 'bg-emerald-100 text-emerald-700' : g.status === 'Từ chối' ? 'bg-rose-100 text-rose-700' : 'bg-amber-200 text-amber-900'}">${escapeHtml(g.status)}</span>
+                </div>
+                <div class="text-slate-700">
+                  <strong>Thời gian lưu trú:</strong> ${escapeHtml(g.duration)} · <strong>Ngày đến:</strong> ${formatDateVN(g.arrivalDate)} · <strong>SĐT:</strong> ${escapeHtml(g.guestPhone || '—')}
+                </div>
+                ${g.notes ? `<div class="text-slate-600 italic">Ghi chú: ${escapeHtml(g.notes)}</div>` : ''}
+                <div class="grid grid-cols-2 gap-2.5 pt-1">
+                  ${renderGuestCccdView(g.cccdFront, 'Mặt trước CCCD')}
+                  ${renderGuestCccdView(g.cccdBack, 'Mặt sau CCCD')}
+                </div>
+                ${g.status === 'Mới gửi' ? `
+                  <div class="flex justify-end gap-2 pt-1">
+                    <button onclick="updateGuestStayStatus('${escapeHtml(g.id)}', 'Từ chối')" class="px-3.5 py-1.5 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold">Từ chối</button>
+                    <button onclick="updateGuestStayStatus('${escapeHtml(g.id)}', 'Đã xác nhận')" class="px-4 py-1.5 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white font-bold">Xác nhận tiếp nhận</button>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('') : `<div class="py-10 text-center text-sm text-slate-500">Chưa có thông báo khai báo lưu trú nào từ các phòng.</div>`}
+          </div>
+        </div>
+      `, 'max-w-3xl');
+    }
+
+    function renderGuestCccdView(src, label) {
+      if (!src) return `<div class="cccd-card-slot bg-white border border-slate-200 flex items-center justify-center text-[11px] text-slate-400">Không có ${label}</div>`;
+      if (src.startsWith('http')) {
+        return `<a href="${escapeHtml(src)}" target="_blank" rel="noopener" class="cccd-card-slot bg-sky-50 border border-sky-200 flex flex-col items-center justify-center gap-1 text-sky-700 font-bold hover:bg-sky-100 p-2 text-center">
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          <span>Mở ảnh ${label} (Drive)</span>
+        </a>`;
+      }
+      return `<div class="cccd-card-slot bg-slate-900 border border-slate-200"><img src="${src}" alt="${label}" class="w-full h-full object-cover" /></div>`;
+    }
+
+    async function updateGuestStayStatus(id, status) {
+      const item = (appState.guestStays || []).find(x => x.id === id);
+      if (item) item.status = status;
+      await saveEncryptedVault();
+      await pushActionToSheet('updateGuestStayStatus', { id, status });
+      openGuestNotificationsModal();
+      render();
+      showToast(`Đã cập nhật trạng thái: ${status}`, 'success');
+    }
+
+    // =========================================================================
+    // 7. PHÂN HỆ KHÁCH THUÊ (SOFT UI TỐI GIẢN · MOBILE-FIRST)
+    // =========================================================================
+    function renderTenant() {
+      const r = session.tenantRoomData || {};
+      const tenants = session.tenantList || [];
+      const stays = session.tenantGuestStays || [];
+      const daysLeft = daysUntil(r.endDate);
+      const showRenewAlert = daysLeft !== null && daysLeft <= 30;
+      const totalTermDays = Math.max(1, Number(r.termMonths || 12) * 30);
+      const remainPct = daysLeft === null ? 0 : Math.max(0, Math.min(100, Math.round((daysLeft / totalTermDays) * 100)));
+      const ringCirc = 2 * Math.PI * 42;
+      const ringOffset = ringCirc * (1 - remainPct / 100);
+
+      return `
+        <div class="min-h-screen bg-[#EAF2FA] pb-12">
+          <header class="sticky top-0 z-30 bg-[#EAF2FA]/92 backdrop-blur-md">
+            <div class="max-w-xl mx-auto px-4 py-3.5 flex items-center justify-between">
+              <div class="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-xs font-extrabold text-[#6E59F0]">${escapeHtml(session.tenantRoomId)}</div>
+              <span class="text-xs font-bold tracking-[0.22em] uppercase text-[#243B53]">PHÒNG ${escapeHtml(session.tenantRoomId)}</span>
+              <button onclick="logout()" aria-label="Đăng xuất" class="w-10 h-10 rounded-2xl neu-btn flex items-center justify-center text-rose-500">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </header>
+
+          <main class="max-w-xl mx-auto px-4 pt-2 space-y-5">
+            ${showRenewAlert ? `
+              <div class="neu-card-sm p-4 border-l-4 ${daysLeft < 0 ? 'border-rose-500' : 'border-amber-500'} flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 mt-0.5 ${daysLeft < 0 ? 'text-rose-500' : 'text-amber-500'}"></i>
+                <div class="text-xs text-[#243B53]">
+                  <div class="font-bold">${daysLeft < 0 ? `Hợp đồng đã quá hạn ${Math.abs(daysLeft)} ngày!` : `Sắp hết hạn hợp đồng (còn ${daysLeft} ngày)`}</div>
+                  <p class="mt-1 text-[#6B8299]">Vui lòng liên hệ Chủ nhà (Anh An: 0936.631.223 / Anh Sơn: 0981.502.345) trước 30 ngày để gia hạn hoặc báo trả phòng.</p>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Thẻ Hợp đồng & Vòng tròn ngày còn lại -->
+            <div class="neu-card p-5 space-y-4">
+              <div class="flex items-center justify-between gap-4">
+                <div class="space-y-2 text-xs">
+                  <div class="text-base font-bold text-[#243B53]">Trạng thái Hợp đồng</div>
+                  <div class="text-[#6B8299]">Bắt đầu: <strong class="text-[#243B53]">${formatDateVN(r.startDate)}</strong></div>
+                  <div class="text-[#6B8299]">Kết thúc: <strong class="text-[#243B53]">${formatDateVN(r.endDate)}</strong></div>
+                  <div class="text-[#6B8299]">Tiền phòng: <strong class="text-[#6E59F0]">${formatVND(r.rent)}</strong></div>
+                </div>
+                <div class="w-28 h-28 rounded-full neu-card flex items-center justify-center relative shrink-0">
+                  <svg viewBox="0 0 110 110" class="w-24 h-24 -rotate-90">
+                    <defs>
+                      <linearGradient id="tenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#56CCF2"/>
+                        <stop offset="100%" stop-color="#7C62F6"/>
+                      </linearGradient>
+                    </defs>
+                    <circle cx="55" cy="55" r="42" fill="none" stroke="#DCE7F3" stroke-width="11" />
+                    <circle cx="55" cy="55" r="42" fill="none" stroke="url(#tenGrad)" stroke-width="11" stroke-linecap="round"
+                      stroke-dasharray="${ringCirc.toFixed(1)}" stroke-dashoffset="${ringOffset.toFixed(1)}" />
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span class="text-base font-extrabold text-[#243B53]">${daysLeft === null ? '—' : (daysLeft >= 0 ? daysLeft : 0)}</span>
+                    <span class="text-[9px] font-semibold text-[#6B8299]">ngày còn</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thành viên & Tạm trú -->
+            <div class="neu-card p-5 space-y-3.5">
+              <div class="text-base font-bold text-[#243B53]">Thành viên & Tạm trú (${tenants.length})</div>
+              <div class="space-y-2.5">
+                ${tenants.length ? tenants.map(t => {
+                  const resB = getResidenceBadge(t);
+                  return `
+                    <div class="neu-inset p-3.5 rounded-2xl space-y-1 text-xs">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-bold text-[#243B53]">${escapeHtml(t.fullName)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${resB.cls}">${resB.label}</span>
+                      </div>
+                      <div class="text-[#6B8299]">${escapeHtml(t.roleInRoom || 'Cư dân')} · ${escapeHtml(t.phone || '—')} · Hạn tạm trú: ${formatDateVN(t.residenceExpiry)}</div>
+                    </div>
+                  `;
+                }).join('') : `<div class="text-xs text-[#6B8299]">Chưa có danh sách thành viên.</div>`}
+              </div>
+
+              <div class="p-3.5 rounded-2xl neu-card-sm text-[11px] text-[#5A7087] space-y-1">
+                <div class="font-bold text-[#243B53]">Mốc quy định Tạm trú – Tạm vắng:</div>
+                <div>• <strong>05 ngày làm việc:</strong> Hoàn tất khai báo sau khi vào ở.</div>
+                <div>• <strong>30 ngày:</strong> Bắt buộc đăng ký tạm trú nếu ở từ 30 ngày trở lên.</div>
+                <div>• <strong>Trước 15 ngày:</strong> Gia hạn tạm trú trước khi hết hạn.</div>
+                <div>• <strong>23h00 / 08h00:</strong> Báo lưu trú qua đêm trước 23h (hoặc 8h sáng hôm sau).</div>
+              </div>
+            </div>
+
+            <!-- Khai báo Người thân / Bạn bè lưu trú -->
+            <div class="neu-card p-5 space-y-4">
+              <div>
+                <div class="text-base font-bold text-[#243B53]">Khai báo Người thân / Bạn bè</div>
+                <p class="text-xs text-[#6B8299] mt-0.5">Ảnh CCCD 2 mặt tự động lưu lên Google Drive tòa nhà.</p>
+              </div>
+              <form onsubmit="submitTenantGuestStay(event)" class="space-y-3 text-xs">
+                <input id="gs-name" type="text" required placeholder="Họ tên khách lưu trú *" class="neu-input w-full px-4 py-3 rounded-2xl font-semibold" />
+                <div class="grid grid-cols-2 gap-2.5">
+                  <input id="gs-rel" type="text" placeholder="Quan hệ (Bố/Mẹ, Bạn...)" class="neu-input w-full px-3.5 py-3 rounded-2xl font-semibold" />
+                  <input id="gs-phone" type="text" placeholder="Số điện thoại" class="neu-input w-full px-3.5 py-3 rounded-2xl font-semibold" />
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <select id="gs-duration" class="neu-input w-full px-3.5 py-3 rounded-2xl font-semibold">
+                    <option value="Qua đêm (1 đêm)">Qua đêm (1 đêm)</option>
+                    <option value="2 - 3 đêm">2 - 3 đêm</option>
+                    <option value="1 tuần">1 tuần</option>
+                    <option value="2 tuần">2 tuần</option>
+                    <option value="1 tháng">1 tháng</option>
+                    <option value="2 tháng">2 tháng</option>
+                    <option value="3 tháng trở lên">3 tháng trở lên</option>
+                  </select>
+                  <input id="gs-arrival" type="date" required value="${new Date().toISOString().slice(0, 10)}" class="neu-input w-full px-3.5 py-3 rounded-2xl font-semibold" />
+                </div>
+                <input id="gs-notes" type="text" placeholder="Ghi chú (biển số xe nếu có)" class="neu-input w-full px-4 py-3 rounded-2xl font-semibold" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  ${['front', 'back'].map(side => `
+                    <div class="space-y-2">
+                      <div class="font-bold text-[#243B53]">${side === 'front' ? 'CCCD Mặt trước *' : 'CCCD Mặt sau *'}</div>
+                      <div id="guest-cccd-preview-${side}" class="cccd-card-slot neu-inset flex items-center justify-center">
+                        ${renderCccdSlotInner(session.guestCccd[side], side)}
+                      </div>
+                      <div class="flex gap-2">
+                        <button type="button" onclick="openCameraModal('guest', '${side}')" class="flex-1 py-2.5 rounded-xl neu-btn-primary font-bold flex items-center justify-center gap-1">
+                          <i data-lucide="camera" class="w-3.5 h-3.5"></i> Chụp
+                        </button>
+                        <label class="flex-1 cursor-pointer py-2.5 rounded-xl neu-btn text-[#243B53] font-bold flex items-center justify-center gap-1">
+                          <i data-lucide="upload" class="w-3.5 h-3.5"></i> Chọn ảnh
+                          <input type="file" accept="image/*" capture="environment" onchange="handleCccdFileUpload(event, 'guest', '${side}')" class="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <button type="submit" id="gs-submit-btn" class="neu-btn-primary w-full py-3.5 rounded-2xl font-bold text-sm mt-2">
+                  Gửi khai báo lưu trú
+                </button>
+              </form>
+
+              ${stays.length ? `
+                <div class="pt-3 border-t border-white/70 space-y-2">
+                  <div class="text-xs font-bold text-[#243B53]">Lịch sử đã gửi</div>
+                  ${stays.map(g => `
+                    <div class="neu-inset p-3 rounded-2xl flex items-center justify-between text-xs">
+                      <div>
+                        <span class="font-bold text-[#243B53]">${escapeHtml(g.guestName)}</span>
+                        <span class="text-[#6B8299]"> · ${escapeHtml(g.duration)}</span>
+                      </div>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'Đã xác nhận' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${escapeHtml(g.status)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Phí & Thanh toán -->
+            <div class="neu-card p-5 space-y-2.5 text-xs">
+              <div class="text-base font-bold text-[#243B53]">Biểu phí & Chuyển khoản</div>
+              <div class="text-[#6B8299]">• Điện: <strong class="text-[#243B53]">4.000đ/kWh</strong> · Nước: <strong class="text-[#243B53]">150k/người</strong> · Net: <strong class="text-[#243B53]">100k</strong> · DV: <strong class="text-[#243B53]">200k/người</strong></div>
+              <div class="neu-inset p-3 rounded-2xl"><strong>Vũ Duy An</strong> · <span class="font-mono font-bold text-[#6E59F0]">000474609999</span> · LPBank</div>
+              <div class="neu-inset p-3 rounded-2xl"><strong>Nguyễn Văn Sơn</strong> · <span class="font-mono font-bold text-[#6E59F0]">03101014025588</span> · MSB</div>
+            </div>
+          </main>
+        </div>
+      `;
+    }
+
+    async function submitTenantGuestStay(e) {
+      e.preventDefault();
+      if (!session.guestCccd.front || !session.guestCccd.back) {
+        showToast('Vui lòng chụp hoặc tải đủ 2 mặt ảnh CCCD của người lưu trú.', 'warning');
+        return;
+      }
+      const btn = document.getElementById('gs-submit-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang gửi ảnh lên hệ thống...'; }
+      const record = {
+        id: 'GS_' + Date.now(),
+        roomId: session.tenantRoomId,
+        guestName: (document.getElementById('gs-name').value || '').trim(),
+        relation: (document.getElementById('gs-rel').value || '').trim() || 'Người thân',
+        guestPhone: (document.getElementById('gs-phone').value || '').trim(),
+        duration: document.getElementById('gs-duration').value,
+        arrivalDate: document.getElementById('gs-arrival').value,
+        notes: (document.getElementById('gs-notes').value || '').trim(),
+        cccdFront: session.guestCccd.front,
+        cccdBack: session.guestCccd.back,
+        status: 'Mới gửi',
+        createdAt: new Date().toLocaleString('vi-VN')
+      };
+      try {
+        if (isSheetConnected() && session.tenantOtp) {
+          const res = await callSheetApi({ action: 'submitGuestStay', otp: session.tenantOtp, record });
+          if (res.frontUrl) record.cccdFront = res.frontUrl;
+          if (res.backUrl) record.cccdBack = res.backUrl;
+        } else {
+          const queued = JSON.parse(safeStorageGet(GUEST_QUEUE_KEY) || '[]');
+          queued.unshift(record);
+          safeStorageSet(GUEST_QUEUE_KEY, JSON.stringify(queued));
+        }
+        session.tenantGuestStays.unshift(record);
+        session.guestCccd = { front: '', back: '' };
+        render();
+        showToast('Đã gửi khai báo lưu trú & ảnh CCCD cho Chủ nhà thành công!', 'success');
+      } catch (err) {
+        showToast('Lỗi gửi khai báo: ' + err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Gửi khai báo lưu trú cho Chủ nhà'; }
+      }
+    }
+
+    // =========================================================================
+    // 8. CAMERA LIVE & XỬ LÝ ẢNH CCCD CHUẨN THẺ 85,6 × 53,98 MM
+    // =========================================================================
+    function renderCccdSlotInner(src, side) {
+      if (!src) {
+        return `<div class="text-center p-3 text-slate-400">
+          <i data-lucide="credit-card" class="w-7 h-7 mx-auto mb-1 opacity-60"></i>
+          <div class="text-[11px] font-semibold">Khung chuẩn thẻ CCCD (${side === 'front' ? 'Mặt trước' : 'Mặt sau'})</div>
+        </div>`;
+      }
+      if (src.startsWith('http')) {
+        return `<a href="${escapeHtml(src)}" target="_blank" rel="noopener" class="text-xs font-bold text-[#156B68] underline">Xem ảnh đã lưu trên Google Drive</a>`;
+      }
+      return `<img src="${src}" alt="CCCD ${side}" class="w-full h-full object-cover" />`;
+    }
+
+    function updateCccdPreview(scope, side, dataUrl) {
+      if (scope === 'crm') session.tempCccd[side] = dataUrl;
+      else session.guestCccd[side] = dataUrl;
+      const box = document.getElementById(`${scope}-cccd-preview-${side}`);
+      if (box) {
+        box.innerHTML = renderCccdSlotInner(dataUrl, side);
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function handleCccdFileUpload(e, scope, side) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxW = 900;
+          const scale = Math.min(1, maxW / img.width);
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          updateCccdPreview(scope, side, canvas.toDataURL('image/jpeg', 0.82));
+          showToast('Đã tải ảnh CCCD thành công!', 'success');
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    function stopCameraStream() {
+      if (session.cameraStream) {
+        session.cameraStream.getTracks().forEach(tr => tr.stop());
+        session.cameraStream = null;
+      }
+    }
+
+    async function openCameraModal(scope, side) {
+      session.cameraTarget = { scope, side };
+      const existingOverlay = document.getElementById('camera-overlay');
+      if (existingOverlay) existingOverlay.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'camera-overlay';
+      overlay.className = 'fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4';
+      overlay.innerHTML = `
+        <div class="w-full max-w-lg bg-slate-900 rounded-[28px] p-5 border border-white/15 space-y-4 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-extrabold">Chụp CCCD (${side === 'front' ? 'Mặt trước' : 'Mặt sau'})</div>
+              <div class="text-[11px] text-slate-400">Canh thẻ vừa khít khung chuẩn 85,6 × 53,98 mm</div>
+            </div>
+            <button onclick="closeCameraModal()" class="p-2 rounded-full bg-white/10 hover:bg-white/20"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <div class="cccd-card-slot cccd-guide-corners bg-black w-full">
+            <video id="cccd-video" autoplay playsinline class="w-full h-full object-cover"></video>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <button onclick="switchCameraFacing()" class="px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Đổi camera
+            </button>
+            <button onclick="captureCccdPhoto()" class="flex-1 py-2.5 rounded-full bg-[#156B68] hover:bg-emerald-600 text-white text-sm font-extrabold flex items-center justify-center gap-2">
+              <i data-lucide="camera" class="w-4 h-4"></i> Chụp ảnh
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      if (window.lucide) lucide.createIcons();
+      await startCameraStream();
+    }
+
+    async function startCameraStream() {
+      stopCameraStream();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: session.cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        session.cameraStream = stream;
+        const v = document.getElementById('cccd-video');
+        if (v) v.srcObject = stream;
+      } catch (_) {
+        showToast('Trình duyệt không cấp quyền Camera Live trong khung này. Hãy bấm nút "Tải ảnh / Chọn ảnh" để chụp trực tiếp bằng điện thoại.', 'warning');
+        closeCameraModal();
+      }
+    }
+
+    async function switchCameraFacing() {
+      session.cameraFacing = session.cameraFacing === 'environment' ? 'user' : 'environment';
+      await startCameraStream();
+    }
+
+    function captureCccdPhoto() {
+      const v = document.getElementById('cccd-video');
+      if (!v || !v.videoWidth || !session.cameraTarget) return;
+      const targetRatio = 85.6 / 53.98;
+      const vw = v.videoWidth, vh = v.videoHeight;
+      let sx = 0, sy = 0, sw = vw, sh = vh;
+      if (vw / vh > targetRatio) {
+        sw = vh * targetRatio;
+        sx = (vw - sw) / 2;
+      } else {
+        sh = vw / targetRatio;
+        sy = (vh - sh) / 2;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = 900;
+      canvas.height = Math.round(900 / targetRatio);
+      canvas.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      updateCccdPreview(session.cameraTarget.scope, session.cameraTarget.side, dataUrl);
+      closeCameraModal();
+      showToast('Đã chụp ảnh CCCD chuẩn khung thẻ!', 'success');
+    }
+
+    function closeCameraModal() {
+      stopCameraStream();
+      const el = document.getElementById('camera-overlay');
+      if (el) el.remove();
+    }
+
+    // =========================================================================
+    // 9. MODAL KẾT NỐI & CHẨN ĐOÁN GOOGLE SHEET
+    // =========================================================================
+    function openSheetModal() {
+      const inGas = isRunningInAppsScript();
+      const currentUrl = getSheetApiUrl();
+      openModal(`
+        <div class="p-6 sm:p-7 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-extrabold text-slate-900">Kết nối & Kiểm tra Đồng bộ Google Sheet</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Đồng bộ hai chiều CRM, OTP Cột J, HĐ Hết hiệu lực và ảnh CCCD Google Drive.</p>
+            </div>
+            <button onclick="closeModal()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+
+          ${inGas ? `
+            <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+              <div class="font-extrabold flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i> Đang chạy trực tiếp trên Google Apps Script</div>
+              <p>Giao diện <code>index.html</code> đã kết nối thẳng với Google Sheet chứa nó (không cần dán URL <code>/exec</code>). Bấm <strong>Kiểm tra</strong> để xem tên Sheet và số hồ sơ đọc được.</p>
+              <div class="flex gap-2 pt-1">
+                <button onclick="diagnoseSheetConnection()" class="px-4 py-2 rounded-full bg-white hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-bold">Kiểm tra Sheet</button>
+                <button onclick="closeModal(); syncFromSheet(false);" class="px-4 py-2 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white font-bold">Đồng bộ ngay</button>
+              </div>
+            </div>
+          ` : `
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-700">URL Web App Google Apps Script (/exec)</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input id="sheet-url-input" type="url" value="${escapeHtml(currentUrl)}" placeholder="https://script.google.com/macros/s/.../exec"
+                  class="flex-1 px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs font-mono" />
+                <button onclick="saveSheetUrl()" class="px-5 py-2.5 rounded-full bg-[#156B68] hover:bg-[#0F5350] text-white text-xs font-bold shrink-0">Lưu & Đồng bộ</button>
+                <button onclick="diagnoseSheetConnection()" class="px-4 py-2.5 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-xs font-bold shrink-0">Kiểm tra</button>
+              </div>
+            </div>
+          `}
+
+          <div id="sheet-diag-box" class="hidden p-3.5 rounded-2xl text-xs border"></div>
+        </div>
+      `, 'max-w-xl');
+    }
+
+    async function diagnoseSheetConnection() {
+      const inGas = isRunningInAppsScript();
+      const box = document.getElementById('sheet-diag-box');
+      if (!box) return;
+      if (!inGas) {
+        const url = (document.getElementById('sheet-url-input')?.value || '').trim();
+        if (!url) {
+          box.className = 'p-3.5 rounded-2xl text-xs border bg-rose-50 border-rose-200 text-rose-800';
+          box.textContent = 'Vui lòng dán URL Web App (/exec) trước khi kiểm tra.';
+          return;
+        }
+        safeStorageSet(SHEET_URL_STORAGE_KEY, url);
+      }
+      box.className = 'p-3.5 rounded-2xl text-xs border bg-slate-50 border-slate-200 text-slate-700';
+      box.textContent = 'Đang kiểm tra kết nối và quét dữ liệu trên Google Sheet...';
+      try {
+        const res = await callSheetApi({ action: 'getData', proof: session.adminApiProof });
+        const meta = res.meta || {};
+        const count = Array.isArray(res.tenants) ? res.tenants.length : 0;
+        box.className = 'p-3.5 rounded-2xl text-xs border bg-emerald-50 border-emerald-200 text-emerald-900';
+        box.innerHTML = `<strong>Kết nối V4 chuẩn xác!</strong> Đang đọc sheet <strong>"${escapeHtml(meta.sheetName || '')}"</strong> (dòng tiêu đề: ${meta.headerRow || 1}, tổng ${meta.totalRows || 0} dòng) → tìm thấy <strong>${count} hồ sơ khách thuê</strong>.`;
+      } catch (err) {
+        box.className = 'p-3.5 rounded-2xl text-xs border bg-rose-50 border-rose-200 text-rose-800';
+        box.textContent = 'Lỗi kết nối: ' + err.message;
+      }
+    }
+
+    async function saveSheetUrl() {
+      const val = (document.getElementById('sheet-url-input')?.value || '').trim();
+      safeStorageSet(SHEET_URL_STORAGE_KEY, val);
+      closeModal();
+      render();
+      if (val) {
+        showToast('Đã lưu URL Google Sheet. Đang đồng bộ dữ liệu...', 'info');
+        await syncFromSheet(false);
+      } else {
+        showToast('Đã ngắt kết nối Google Sheet, chuyển về chế độ mã hóa cục bộ.', 'info');
+      }
+    }
+
+    // =========================================================================
+    // 10. KHỞI CHẠY ỨNG DỤNG
+    // =========================================================================
+    function render() {
+      const root = document.getElementById('app');
+      if (!root) return;
+
+      if (!session.role) {
+        root.innerHTML = renderAuth();
+      } else if (session.role === 'landlord') {
+        root.innerHTML = renderLandlord();
+      } else if (session.role === 'tenant') {
+        root.innerHTML = renderTenant();
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
